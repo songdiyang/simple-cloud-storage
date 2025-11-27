@@ -264,11 +264,18 @@ def download_file(request, file_id):
             # 获取文件内容
             file_content, headers = result
             
-            # 创建响应
-            response = StreamingHttpResponse(
-                file_content,
-                content_type=file_obj.mime_type
-            )
+            # 对于二进制文件，使用HttpResponse而不是StreamingHttpResponse
+            if file_obj.mime_type.startswith(('image/', 'video/', 'audio/', 'application/')):
+                response = HttpResponse(
+                    file_content,
+                    content_type=file_obj.mime_type
+                )
+            else:
+                # 对于文本文件，可以使用StreamingHttpResponse
+                response = StreamingHttpResponse(
+                    file_content,
+                    content_type=file_obj.mime_type
+                )
             
             # 设置下载头
             response['Content-Disposition'] = f'attachment; filename="{file_obj.original_name}"'
