@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文件上传测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .upload-section {
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .result {
+            margin: 20px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        input[type="file"] {
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>云存储系统 - 文件上传测试</h1>
+    
+    <div class="upload-section">
+        <h3>用户登录</h3>
+        <input type="text" id="username" placeholder="用户名" value="demo">
+        <input type="password" id="password" placeholder="密码" value="demo123">
+        <button onclick="login()">登录</button>
+    </div>
+
+    <div class="upload-section">
+        <h3>文件上传测试</h3>
+        <input type="file" id="fileInput" onchange="handleFileSelect(event)">
+        <br>
+        <button onclick="uploadFile()" id="uploadBtn" disabled>上传文件</button>
+        <button onclick="testAvatarUpload()">测试头像上传</button>
+    </div>
+
+    <div class="upload-section">
+        <h3>操作结果</h3>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        let authToken = null;
+
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch('http://localhost:8000/api/auth/login/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    authToken = data.token;
+                    showResult('登录成功！', 'success');
+                    document.getElementById('uploadBtn').disabled = false;
+                } else {
+                    showResult(`登录失败: ${data.error || '未知错误'}`, 'error');
+                }
+            } catch (error) {
+                showResult(`登录错误: ${error.message}`, 'error');
+            }
+        }
+
+        let selectedFile = null;
+
+        function handleFileSelect(event) {
+            selectedFile = event.target.files[0];
+            if (selectedFile) {
+                showResult(`已选择文件: ${selectedFile.name} (${formatFileSize(selectedFile.size)})`, 'success');
+            }
+        }
+
+        async function uploadFile() {
+            if (!authToken) {
+                showResult('请先登录', 'error');
+                return;
+            }
+            
+            if (!selectedFile) {
+                showResult('请先选择文件', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+
+            try {
+                showResult('正在上传文件...', 'info');
+                
+                const response = await fetch('http://localhost:8000/api/files/upload/', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Token ${authToken}`,
+                        // 注意：不要设置Content-Type，让浏览器自动设置multipart/form-data
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult(`文件上传成功！<br>
+                        文件名: ${data.name}<br>
+                        大小: ${formatFileSize(data.size)}<br>
+                        ID: ${data.id}`, 'success');
+                } else {
+                    showResult(`上传失败: ${data.error || '未知错误'}`, 'error');
+                }
+            } catch (error) {
+                showResult(`上传错误: ${error.message}`, 'error');
+            }
+        }
+
+        async function testAvatarUpload() {
+            if (!authToken) {
+                showResult('请先登录', 'error');
+                return;
+            }
+
+            // 创建一个测试图片
+            const canvas = document.createElement('canvas');
+            canvas.width = 100;
+            canvas.height = 100;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#007bff';
+            ctx.fillRect(0, 0, 100, 100);
+            
+            canvas.toBlob(async (blob) => {
+                const formData = new FormData();
+                formData.append('avatar', blob, 'test-avatar.png');
+
+                try {
+                    showResult('正在上传头像...', 'info');
+                    
+                    const response = await fetch('http://localhost:8000/api/auth/upload-avatar/', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Token ${authToken}`,
+                            // 注意：不要设置Content-Type
+                        },
+                        body: formData
+                    });
+
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        showResult(`头像上传成功！<br>
+                            消息: ${data.message}`, 'success');
+                    } else {
+                        showResult(`头像上传失败: ${data.error || '未知错误'}`, 'error');
+                    }
+                } catch (error) {
+                    showResult(`头像上传错误: ${error.message}`, 'error');
+                }
+            }, 'image/png');
+        }
+
+        function showResult(message, type) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `<div class="${type}">${message}</div>`;
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // 页面加载时自动尝试登录
+        window.onload = function() {
+            login();
+        };
+    </script>
+</body>
+</html>

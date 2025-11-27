@@ -1,0 +1,86 @@
+/* 全局样式重置 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: #f0f2f5;
+  min-height: 100vh;
+  color: #333;
+  line-height: 1.6;
+}
+
+/* 文件图标样式 */
+.file-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: white;
+  font-weight: bold;
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
+.file-icon.pdf { background: linear-gradient(145deg, #ff4757, #ff6348); }
+.file-icon.doc { background: linear-gradient(145deg, #3742fa, #5352ed); }
+.file-icon.xls { background: linear-gradient(145deg, #26de81, #20bf6b); }
+.file-icon.img { background: linear-gradient(145deg, #ff9ff3, #ee5a24); }
+.file-icon.video { background: linear-gradient(145deg, #4834d4, #686de0); }
+.file-icon.audio { background: linear-gradient(145deg, #f9ca24, #f0932b); }
+.file-icon.archive { background: linear-gradient(145deg, #636e72, #2d3436); }
+.file-icon.default { background: linear-gradient(145deg, #dfe6e9, #b2bec3); color: #636e72; }
+
+/* 自定义滚动条 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* 通用工具类 */
+.text-center { text-align: center; }
+.text-left { text-align: left; }
+.text-right { text-align: right; }
+
+.mt-8 { margin-top: 8px; }
+.mt-16 { margin-top: 16px; }
+.mt-24 { margin-top: 24px; }
+
+.mb-8 { margin-bottom: 8px; }
+.mb-16 { margin-bottom: 16px; }
+.mb-24 { margin-bottom: 24px; }
+
+.flex { display: flex; }
+.flex-center { 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+}
+.flex-between { 
+  display: flex; 
+  align-items: center; 
+  justify-content: space-between; 
+}
+
+.full-width { width: 100%; }
+.full-height { height: 100%; }

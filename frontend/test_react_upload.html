@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>前端上传测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .upload-section {
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .result {
+            margin: 20px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        input[type="file"] {
+            margin: 10px 0;
+        }
+        .debug-info {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>React前端上传功能测试</h1>
+    
+    <div class="upload-section">
+        <h3>用户登录</h3>
+        <input type="text" id="username" placeholder="用户名" value="demo">
+        <input type="password" id="password" placeholder="密码" value="demo123">
+        <button onclick="login()">登录</button>
+    </div>
+
+    <div class="upload-section">
+        <h3>模拟React上传方式</h3>
+        <input type="file" id="fileInput" onchange="handleFileSelect(event)">
+        <br>
+        <button onclick="testReactUpload()" id="uploadBtn" disabled>测试React上传</button>
+        <button onclick="testDirectUpload()">测试直接上传</button>
+    </div>
+
+    <div class="upload-section">
+        <h3>调试信息</h3>
+        <div id="debugInfo" class="debug-info">等待测试...</div>
+    </div>
+
+    <div class="upload-section">
+        <h3>操作结果</h3>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        let authToken = null;
+
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                showDebug('正在登录...');
+                const response = await fetch('http://localhost:8000/api/auth/login/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    authToken = data.token;
+                    showResult('登录成功！', 'success');
+                    showDebug(`Token: ${authToken.substring(0, 20)}...`);
+                    document.getElementById('uploadBtn').disabled = false;
+                } else {
+                    showResult(`登录失败: ${data.error || '未知错误'}`, 'error');
+                }
+            } catch (error) {
+                showResult(`登录错误: ${error.message}`, 'error');
+            }
+        }
+
+        let selectedFile = null;
+
+        function handleFileSelect(event) {
+            selectedFile = event.target.files[0];
+            if (selectedFile) {
+                showResult(`已选择文件: ${selectedFile.name} (${formatFileSize(selectedFile.size)})`, 'success');
+                showDebug(`文件详情:\n名称: ${selectedFile.name}\n大小: ${selectedFile.size} bytes\n类型: ${selectedFile.type}\n最后修改: ${new Date(selectedFile.lastModified).toLocaleString()}`);
+            }
+        }
+
+        // 模拟React上传方式（修复后的方式）
+        async function testReactUpload() {
+            if (!authToken) {
+                showResult('请先登录', 'error');
+                return;
+            }
+            
+            if (!selectedFile) {
+                showResult('请先选择文件', 'error');
+                return;
+            }
+
+            try {
+                showDebug('开始React方式上传测试...');
+                
+                // 模拟React上传mutation的FormData构建方式
+                const data = new FormData();
+                data.append('file', selectedFile); // 直接使用文件对象，不是file.file
+                
+                showDebug(`FormData内容:\n- file: ${selectedFile.name} (${selectedFile.size} bytes)\n- Content-Type: ${selectedFile.type}`);
+
+                showResult('正在上传文件...', 'info');
+                
+                const response = await fetch('http://localhost:8000/api/files/upload/', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Token ${authToken}`,
+                        // 不设置Content-Type，让浏览器自动设置multipart/form-data
+                    },
+                    body: data
+                });
+
+                const responseData = await response.json();
+                
+                if (response.ok) {
+                    showResult(`✅ React方式上传成功！<br>
+                        文件名: ${responseData.name}<br>
+                        大小: ${formatFileSize(responseData.size)}<br>
+                        ID: ${responseData.id}`, 'success');
+                    showDebug(`响应数据: ${JSON.stringify(responseData, null, 2)}`);
+                } else {
+                    showResult(`❌ React方式上传失败: ${responseData.error || '未知错误'}`, 'error');
+                    showDebug(`错误响应: ${JSON.stringify(responseData, null, 2)}`);
+                }
+            } catch (error) {
+                showResult(`❌ React方式上传错误: ${error.message}`, 'error');
+                showDebug(`错误详情: ${error.stack}`);
+            }
+        }
+
+        // 直接上传方式（对比）
+        async function testDirectUpload() {
+            if (!authToken) {
+                showResult('请先登录', 'error');
+                return;
+            }
+            
+            if (!selectedFile) {
+                showResult('请先选择文件', 'error');
+                return;
+            }
+
+            try {
+                showDebug('开始直接上传测试...');
+                
+                const formData = new FormData();
+                formData.append('file', selectedFile);
+
+                showResult('正在上传文件...', 'info');
+                
+                const response = await fetch('http://localhost:8000/api/files/upload/', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Token ${authToken}`,
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult(`✅ 直接上传成功！<br>
+                        文件名: ${data.name}<br>
+                        大小: ${formatFileSize(data.size)}<br>
+                        ID: ${data.id}`, 'success');
+                } else {
+                    showResult(`❌ 直接上传失败: ${data.error || '未知错误'}`, 'error');
+                }
+            } catch (error) {
+                showResult(`❌ 直接上传错误: ${error.message}`, 'error');
+            }
+        }
+
+        function showResult(message, type) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `<div class="${type}">${message}</div>`;
+        }
+
+        function showDebug(message) {
+            const debugDiv = document.getElementById('debugInfo');
+            const timestamp = new Date().toLocaleTimeString();
+            debugDiv.innerHTML = `[${timestamp}] ${message.replace(/\n/g, '<br>')}`;
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // 页面加载时自动尝试登录
+        window.onload = function() {
+            showDebug('页面加载完成，准备测试...');
+            login();
+        };
+    </script>
+</body>
+</html>

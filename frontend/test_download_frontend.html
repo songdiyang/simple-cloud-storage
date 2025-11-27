@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>前端下载功能测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .section {
+            border: 2px solid #ccc;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .result {
+            margin: 20px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .file-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+        }
+        .file-item:last-child {
+            border-bottom: none;
+        }
+        .file-info {
+            flex: 1;
+        }
+        .file-name {
+            font-weight: bold;
+        }
+        .file-details {
+            font-size: 12px;
+            color: #666;
+        }
+        .download-btn {
+            background-color: #28a745;
+        }
+        .download-btn:hover {
+            background-color: #218838;
+        }
+        .debug-info {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>前端下载功能测试</h1>
+    
+    <div class="section">
+        <h3>用户登录</h3>
+        <input type="text" id="username" placeholder="用户名" value="demo">
+        <input type="password" id="password" placeholder="密码" value="demo123">
+        <button onclick="login()">登录</button>
+        <button onclick="logout()">登出</button>
+    </div>
+
+    <div class="section">
+        <h3>文件列表</h3>
+        <button onclick="loadFiles()">刷新文件列表</button>
+        <div id="fileList" class="file-list">请先登录...</div>
+    </div>
+
+    <div class="section">
+        <h3>下载测试</h3>
+        <div id="downloadButtons"></div>
+    </div>
+
+    <div class="section">
+        <h3>调试信息</h3>
+        <div id="debugInfo" class="debug-info">等待操作...</div>
+    </div>
+
+    <div class="section">
+        <h3>操作结果</h3>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        let authToken = null;
+
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                showDebug('正在登录...');
+                const response = await fetch('http://localhost:8000/api/auth/login/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    authToken = data.token;
+                    showResult('登录成功！', 'success');
+                    showDebug(`Token: ${authToken.substring(0, 20)}...`);
+                    await loadFiles();
+                } else {
+                    showResult(`登录失败: ${data.error || '未知错误'}`, 'error');
+                }
+            } catch (error) {
+                showResult(`登录错误: ${error.message}`, 'error');
+            }
+        }
+
+        function logout() {
+            authToken = null;
+            showResult('已登出', 'info');
+            showDebug('Token已清除');
+            document.getElementById('fileList').innerHTML = '请先登录...';
+            document.getElementById('downloadButtons').innerHTML = '';
+        }
+
+        async function loadFiles() {
+            if (!authToken) {
+                showResult('请先登录', 'error');
+                return;
+            }
+
+            try {
+                showDebug('正在加载文件列表...');
+                const response = await fetch('http://localhost:8000/api/files/', {
+                    headers: {
+                        'Authorization': `Token ${authToken}`
+                    }
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const files = data.results || data;
+                    displayFiles(files);
+                    showResult(`找到 ${files.length} 个文件`, 'success');
+                } else {
+                    showResult(`加载文件列表失败: ${data.error || '未知错误'}`, 'error');
+                }
+            } catch (error) {
+                showResult(`加载文件列表错误: ${error.message}`, 'error');
+            }
+        }
+
+        function displayFiles(files) {
+            const fileListDiv = document.getElementById('fileList');
+            const downloadButtonsDiv = document.getElementById('downloadButtons');
+            
+            if (files.length === 0) {
+                fileListDiv.innerHTML = '<p>没有文件</p>';
+                downloadButtonsDiv.innerHTML = '';
+                return;
+            }
+
+            let fileListHTML = '';
+            let downloadButtonsHTML = '<h4>下载按钮:</h4>';
+            
+            files.forEach(file => {
+                fileListHTML += `
+                    <div class="file-item">
+                        <div class="file-info">
+                            <div class="file-name">${file.original_name}</div>
+                            <div class="file-details">
+                                大小: ${file.size_display} | 
+                                类型: ${file.file_type} | 
+                                上传时间: ${new Date(file.created_at).toLocaleString()}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                downloadButtonsHTML += `
+                    <button class="download-btn" onclick="downloadFile('${file.id}', '${file.original_name}', '${file.mime_type}')">
+                        下载 ${file.original_name}
+                    </button>
+                `;
+            });
+            
+            fileListDiv.innerHTML = fileListHTML;
+            downloadButtonsDiv.innerHTML = downloadButtonsHTML;
+        }
+
+        async function downloadFile(fileId, filename, mimeType) {
+            if (!authToken) {
+                showResult('请先登录', 'error');
+                return;
+            }
+
+            try {
+                showDebug(`开始下载文件: ${filename} (ID: ${fileId})`);
+                showResult('正在准备下载...', 'info');
+                
+                // 方式1: 尝试获取下载URL
+                const urlResponse = await fetch(`http://localhost:8000/api/files/${fileId}/download-url/`, {
+                    headers: {
+                        'Authorization': `Token ${authToken}`
+                    }
+                });
+                
+                if (urlResponse.ok) {
+                    const urlData = await urlResponse.json();
+                    showDebug(`获取下载URL成功: ${urlData.download_url}`);
+                    
+                    if (urlData.method === 'direct') {
+                        // 直接下载API
+                        showDebug('使用直接下载方式...');
+                        await directDownload(fileId, filename, mimeType);
+                    } else {
+                        // Swift URL下载
+                        showDebug('使用Swift URL下载...');
+                        await urlDownload(urlData.download_url, filename);
+                    }
+                } else {
+                    // 如果获取URL失败，直接使用下载API
+                    showDebug('获取下载URL失败，使用直接下载...');
+                    await directDownload(fileId, filename, mimeType);
+                }
+                
+            } catch (error) {
+                showResult(`下载失败: ${error.message}`, 'error');
+                showDebug(`下载错误详情: ${error.stack}`);
+            }
+        }
+
+        async function directDownload(fileId, filename, mimeType) {
+            try {
+                const response = await fetch(`http://localhost:8000/api/files/${fileId}/download/`, {
+                    headers: {
+                        'Authorization': `Token ${authToken}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = filename;
+                    link.style.display = 'none';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    
+                    window.URL.revokeObjectURL(url);
+                    
+                    showResult(`✅ 文件下载成功: ${filename}`, 'success');
+                    showDebug(`文件大小: ${blob.size} bytes`);
+                } else {
+                    const errorData = await response.json();
+                    showResult(`直接下载失败: ${errorData.error || '未知错误'}`, 'error');
+                }
+            } catch (error) {
+                showResult(`直接下载错误: ${error.message}`, 'error');
+            }
+        }
+
+        async function urlDownload(downloadUrl, filename) {
+            try {
+                const response = await fetch(downloadUrl);
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = filename;
+                    link.style.display = 'none';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    
+                    window.URL.revokeObjectURL(url);
+                    
+                    showResult(`✅ URL下载成功: ${filename}`, 'success');
+                    showDebug(`文件大小: ${blob.size} bytes`);
+                } else {
+                    showResult(`URL下载失败: ${response.status} - ${response.statusText}`, 'error');
+                }
+            } catch (error) {
+                showResult(`URL下载错误: ${error.message}`, 'error');
+            }
+        }
+
+        function showResult(message, type) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `<div class="${type}">${message}</div>`;
+        }
+
+        function showDebug(message) {
+            const debugDiv = document.getElementById('debugInfo');
+            const timestamp = new Date().toLocaleTimeString();
+            debugDiv.textContent = `[${timestamp}] ${message}`;
+        }
+
+        // 页面加载时自动尝试登录
+        window.onload = function() {
+            showDebug('页面加载完成，准备测试...');
+            login();
+        };
+    </script>
+</body>
+</html>

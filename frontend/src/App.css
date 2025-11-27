@@ -1,0 +1,304 @@
+/* 全局样式 */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: #f5f7fa;
+}
+
+/* 简洁的登录页面样式 */
+.login-container {
+  background: #f0f2f5;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.login-card {
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  background: #ffffff;
+}
+
+.login-icon {
+  background: #1890ff;
+  border-radius: 50%;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-title {
+  color: #262626;
+  font-weight: 600;
+}
+
+.login-subtitle {
+  color: #8c8c8c;
+  font-size: 14px;
+}
+
+.login-input {
+  height: 40px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.login-input:focus,
+.login-input-focused {
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+.login-button {
+  height: 40px;
+  background-color: #1890ff;
+  border-color: #1890ff;
+  border-radius: 6px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.login-button:hover {
+  background-color: #40a9ff;
+  border-color: #40a9ff;
+}
+
+.login-divider {
+  border-top: 1px solid #f0f0f0;
+  margin-top: 16px;
+  padding-top: 16px;
+}
+
+.login-link {
+  color: #1890ff;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.login-link:hover {
+  color: #40a9ff;
+}
+
+/* 现代化卡片样式 */
+.modern-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #f0f0f0;
+  background: #ffffff;
+  transition: all 0.2s ease;
+}
+
+.modern-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: #e6f7ff;
+}
+
+/* 现代化输入框样式 */
+.modern-input .ant-input {
+  border-radius: 6px;
+  border: 1px solid #d9d9d9;
+  padding: 8px 12px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.modern-input .ant-input:focus,
+.modern-input .ant-input-focused {
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+.modern-input .ant-input-prefix {
+  color: #8c8c8c;
+}
+
+/* 现代化按钮样式 */
+.modern-button {
+  border-radius: 6px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  height: 36px;
+  font-size: 14px;
+}
+
+.modern-button-primary {
+  background-color: #1890ff;
+  border-color: #1890ff;
+}
+
+.modern-button-primary:hover {
+  background-color: #40a9ff;
+  border-color: #40a9ff;
+}
+
+/* 简洁的加载动画 */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: #f0f2f5;
+}
+
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  background: #1890ff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 20px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .cel-card {
+    margin: 0 16px;
+  }
+  
+  .cel-float {
+    margin: 0 16px;
+  }
+}
+
+/* 自定义滚动条 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #5a6fd8, #6a4190);
+}
+
+/* 文件管理相关样式 */
+.file-item {
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.file-item:hover {
+  background: #f8f9ff;
+  transform: translateX(4px);
+}
+
+.file-icon {
+  font-size: 24px;
+  margin-right: 12px;
+}
+
+/* 分享链接样式 */
+.share-link {
+  background: linear-gradient(145deg, #e3f2fd, #bbdefb);
+  border-radius: 8px;
+  padding: 12px;
+  margin: 8px 0;
+  border-left: 4px solid #2196f3;
+}
+
+/* 上传区域样式 */
+.upload-area {
+  border: 2px dashed #667eea;
+  border-radius: 12px;
+  padding: 40px;
+  text-align: center;
+  background: linear-gradient(145deg, #f8f9ff, #fff);
+  transition: all 0.3s ease;
+}
+
+.upload-area:hover {
+  border-color: #764ba2;
+  background: linear-gradient(145deg, #f0f2ff, #f8f9ff);
+}
+
+.upload-area.dragover {
+  border-color: #4caf50;
+  background: rgba(76, 175, 80, 0.05);
+}
+
+/* 进度条样式 */
+.progress-custom {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.progress-custom .ant-progress-bg {
+  background: linear-gradient(90deg, #667eea, #764ba2);
+}
+
+/* 标签样式 */
+.tag-custom {
+  border-radius: 12px;
+  font-weight: 500;
+  border: none;
+  padding: 4px 12px;
+}
+
+/* 消息提示样式 */
+.ant-message {
+  z-index: 9999;
+}
+
+.ant-notification {
+  z-index: 9999;
+}
+
+/* 模态框样式 */
+.ant-modal-content {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.ant-modal-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-bottom: none;
+  color: white;
+}
+
+.ant-modal-title {
+  color: white;
+  font-weight: 600;
+}
+
+/* 抽屉样式 */
+.ant-drawer-content {
+  background: #f8f9ff;
+}
+
+.ant-drawer-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-bottom: none;
+}
+
+.ant-drawer-title {
+  color: white;
+  font-weight: 600;
+}
