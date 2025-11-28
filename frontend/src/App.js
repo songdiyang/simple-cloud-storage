@@ -10,6 +10,8 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Files from './pages/Files';
 import Shares from './pages/Shares';
+import ShareView from './pages/ShareView';
+import FileSearch from './pages/FileSearch';
 import Profile from './pages/Profile';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
@@ -34,6 +36,7 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/share/:shareCode" element={<ShareView />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     );
@@ -55,7 +58,9 @@ function App() {
             <Route path="/files" element={<Files />} />
             <Route path="/files/:folderId" element={<Files />} />
             <Route path="/shares" element={<Shares />} />
+            <Route path="/search" element={<FileSearch />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/share/:shareCode" element={<ShareView />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </Content>

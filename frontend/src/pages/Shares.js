@@ -25,6 +25,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import dayjs from 'dayjs';
 import api from '../services/api';
+import { formatBytes, formatDateTime, getFileIcon } from '../utils/format';
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -40,7 +41,7 @@ const Shares = () => {
   );
 
   const createShareMutation = useMutation(
-    (data) => api.post('/api/files/shares/create/', data),
+    (fileId) => api.post(`/api/files/${fileId}/share/`),
     {
       onSuccess: () => {
         message.success('分享创建成功！');
@@ -97,8 +98,8 @@ const Shares = () => {
             size="small"
             icon={<CopyOutlined />}
             onClick={() => {
-              navigator.clipboard.writeText(`${window.location.origin}/share/${code}`);
-              message.success('分享链接已复制到剪贴板！');
+              navigator.clipboard.writeText(code);
+              message.success('分享码已复制到剪贴板！');
             }}
           />
         </Space>

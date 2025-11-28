@@ -5,6 +5,7 @@ import {
   DashboardOutlined,
   FolderOutlined,
   ShareAltOutlined,
+  SearchOutlined,
   UserOutlined
 } from '@ant-design/icons';
 
@@ -29,6 +30,11 @@ const Sidebar = () => {
       key: '/shares',
       icon: <ShareAltOutlined />,
       label: '我的分享',
+    },
+    {
+      key: '/search',
+      icon: <SearchOutlined />,
+      label: '搜索文件',
     },
     {
       key: '/profile',

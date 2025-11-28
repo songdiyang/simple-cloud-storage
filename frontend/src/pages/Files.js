@@ -29,6 +29,7 @@ import {
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import api from '../services/api';
+import ShareModal from '../components/ShareModal';
 
 const { Title, Text } = Typography;
 const { Dragger } = Upload;
@@ -373,9 +374,23 @@ const Files = () => {
     return colorMap[extension] || '#667eea';
   };
 
+  const [shareModalVisible, setShareModalVisible] = useState(false);
+  const [selectedFileId, setSelectedFileId] = useState(null);
+
   const handleShareFile = (fileId) => {
-    // 这里可以添加分享逻辑
-    message.info('分享功能开发中...');
+    setSelectedFileId(fileId);
+    setShareModalVisible(true);
+  };
+
+  const handleShareModalOk = (shareData) => {
+    setShareModalVisible(false);
+    setSelectedFileId(null);
+    queryClient.invalidateQueries('my-shares');
+  };
+
+  const handleShareModalCancel = () => {
+    setShareModalVisible(false);
+    setSelectedFileId(null);
   };
 
   return (
@@ -487,6 +502,14 @@ const Files = () => {
           </Form.Item>
         </Form>
       </Modal>
+
+      {/* 分享模态框 */}
+      <ShareModal
+        visible={shareModalVisible}
+        onCancel={handleShareModalCancel}
+        onOk={handleShareModalOk}
+        fileId={selectedFileId}
+      />
     </div>
   );
 };

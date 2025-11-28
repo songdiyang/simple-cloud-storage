@@ -19,6 +19,12 @@ urlpatterns = [
     path('<uuid:file_id>/share/', views.create_share, name='create_share'),
     path('shares/', views.my_shares, name='my_shares'),
     path('shares/<uuid:share_id>/delete/', views.delete_share, name='delete_share'),
+    path('save-shared-file/', views.save_shared_file, name='save_shared_file'),
+    # 公开分享访问
+    path('share/<str:share_code>/', views.get_share_info, name='get_share_info'),
+    path('share/<str:share_code>/download/', views.download_shared_file, name='download_shared_file'),
+    path('share/<str:share_code>/temp_download/<str:filename>/', views.temp_download_shared_file, name='temp_download_shared_file'),
+    path('share/<str:share_code>/temp/', views.download_shared_file_temp, name='download_shared_file_temp'),
     
     # 存储信息
     path('storage/', views.storage_info, name='storage_info'),
