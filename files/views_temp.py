@@ -216,16 +216,7 @@ def create_share(request, file_id):
 @permission_classes([IsAuthenticated])
 def my_shares(request):
     """获取我的分享列表"""
-    shares = FileShare.objects.filter(owner=request.user, is_active=True).order_by('-created_at')
-    serializer = FileShareSerializer(shares, many=True)
-    return Response(serializer.data)
-
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def deleted_shares(request):
-    """获取已删除的分享列表"""
-    shares = FileShare.objects.filter(owner=request.user, is_active=False).order_by('-created_at')
+    shares = FileShare.objects.filter(owner=request.user).order_by('-created_at')
     serializer = FileShareSerializer(shares, many=True)
     return Response(serializer.data)
 

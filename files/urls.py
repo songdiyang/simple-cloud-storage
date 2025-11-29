@@ -18,6 +18,7 @@ urlpatterns = [
     # 分享相关
     path('<uuid:file_id>/share/', views.create_share, name='create_share'),
     path('shares/', views.my_shares, name='my_shares'),
+    path('shares/deleted/', views.deleted_shares, name='deleted_shares'),
     path('shares/<uuid:share_id>/delete/', views.delete_share, name='delete_share'),
     path('save-shared-file/', views.save_shared_file, name='save_shared_file'),
     # 公开分享访问

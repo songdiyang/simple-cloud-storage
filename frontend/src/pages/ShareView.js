@@ -96,7 +96,7 @@ const ShareView = () => {
       
       // 从响应头获取文件名
       const contentDisposition = response.headers['content-disposition'];
-      let filename = shareInfo?.file_name || 'download';
+      let filename = shareInfo?.file_name || shareInfo?.original_name || 'download';
       if (contentDisposition) {
         const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
         if (filenameMatch && filenameMatch[1]) {
@@ -193,7 +193,7 @@ const ShareView = () => {
         width={500}
       >
         <Alert
-          message={`将文件 "${shareInfo?.file_name}" 保存到您的云盘`}
+          message={`将文件 "${shareInfo?.file_name || '未知文件'}" 保存到您的云盘`}
           type="info"
           showIcon
           style={{ marginBottom: 20 }}
@@ -293,7 +293,7 @@ const ShareView = () => {
       <Card>
         <div style={{ textAlign: 'center', marginBottom: 30 }}>
           <FileOutlined style={{ fontSize: 64, color: '#1890ff', marginBottom: 16 }} />
-          <Title level={2}>{shareInfo.file_name}</Title>
+          <Title level={2}>{shareInfo?.file_name || '未知文件'}</Title>
         </div>
 
         <Descriptions column={1} bordered style={{ marginBottom: 30 }}>

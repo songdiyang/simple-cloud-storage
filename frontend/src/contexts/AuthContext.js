@@ -51,8 +51,25 @@ export const AuthProvider = ({ children }) => {
       message.success('登录成功！');
       return { success: true };
     } catch (error) {
-      const errorMessage = error.response?.data?.error || '登录失败';
-      message.error(errorMessage);
+      let errorMessage = '登录失败，请稍后重试';
+      
+      if (error.response?.status === 400) {
+        // Django REST Framework 返回的400错误通常包含详细的字段错误
+        const errorData = error.response.data;
+        if (errorData.non_field_errors) {
+          errorMessage = errorData.non_field_errors[0];
+        } else if (errorData.error) {
+          errorMessage = errorData.error;
+        } else {
+          errorMessage = '用户名或密码错误，请检查后重试';
+        }
+      } else if (error.response?.status === 401) {
+        errorMessage = '用户名或密码错误，请检查后重试';
+      } else if (error.code === 'NETWORK_ERROR') {
+        errorMessage = '网络连接失败，请检查网络后重试';
+      }
+      
+      // 不在这里显示错误消息，让登录页面自己处理
       return { success: false, error: errorMessage };
     }
   };

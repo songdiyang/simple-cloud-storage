@@ -20,7 +20,8 @@ import {
   PlusOutlined, 
   DeleteOutlined,
   CopyOutlined,
-  EyeOutlined
+  EyeOutlined,
+  HistoryOutlined
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import dayjs from 'dayjs';
@@ -33,11 +34,19 @@ const { RangePicker } = DatePicker;
 const Shares = () => {
   const queryClient = useQueryClient();
   const [createModalVisible, setCreateModalVisible] = useState(false);
+  const [showDeleted, setShowDeleted] = useState(false);
   const [shareForm] = Form.useForm();
 
   const { data: shares = [], isLoading } = useQuery(
     'my-shares',
-    () => api.get('/api/files/shares/').then(res => res.data)
+    () => api.get('/api/files/shares/').then(res => res.data),
+    { enabled: !showDeleted }
+  );
+
+  const { data: deletedShares = [], isLoading: isLoadingDeleted } = useQuery(
+    'deleted-shares',
+    () => api.get('/api/files/shares/deleted/').then(res => res.data),
+    { enabled: showDeleted }
   );
 
   const createShareMutation = useMutation(
@@ -145,29 +154,42 @@ const Shares = () => {
     {
       title: '操作',
       key: 'actions',
-      render: (_, record) => (
-        <Space>
-          <Button
-            type="text"
-            size="small"
-            icon={<EyeOutlined />}
-            onClick={() => window.open(`/share/${record.share_code}`, '_blank')}
-          />
-          <Popconfirm
-            title="确定取消这个分享吗？"
-            onConfirm={() => deleteShareMutation.mutate(record.id)}
-            okText="确定"
-            cancelText="取消"
-          >
+      render: (_, record) => {
+        const isDeleted = !record.is_active;
+        
+        return (
+          <Space>
             <Button
               type="text"
-              danger
               size="small"
-              icon={<DeleteOutlined />}
+              icon={<EyeOutlined />}
+              onClick={() => window.open(`/share/${record.share_code}`, '_blank')}
+              disabled={isDeleted}
+              title={isDeleted ? '分享已删除，无法访问' : '查看分享'}
             />
-          </Popconfirm>
-        </Space>
-      ),
+            {!isDeleted && (
+              <Popconfirm
+                title="确定取消这个分享吗？"
+                onConfirm={() => deleteShareMutation.mutate(record.id)}
+                okText="确定"
+                cancelText="取消"
+              >
+                <Button
+                  type="text"
+                  danger
+                  size="small"
+                  icon={<DeleteOutlined />}
+                />
+              </Popconfirm>
+            )}
+            {isDeleted && (
+              <Tag color="red" icon={<DeleteOutlined />}>
+                已删除
+              </Tag>
+            )}
+          </Space>
+        );
+      },
     },
   ];
 
@@ -175,25 +197,38 @@ const Shares = () => {
     <div>
       <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Title level={2} style={{ color: '#333', margin: 0 }}>
-          我的分享
+          {showDeleted ? '已删除的分享' : '我的分享'}
         </Title>
         
-        <Button 
-          type="primary" 
-          icon={<PlusOutlined />}
-          onClick={() => setCreateModalVisible(true)}
-          className="cel-button"
-        >
-          创建分享
-        </Button>
+        <Space>
+          <Button 
+            icon={<HistoryOutlined />}
+            onClick={() => setShowDeleted(!showDeleted)}
+            className={showDeleted ? "cel-button" : ""}
+            type={showDeleted ? "primary" : "default"}
+          >
+            {showDeleted ? '返回当前分享' : '查看已删除'}
+          </Button>
+          
+          {!showDeleted && (
+            <Button 
+              type="primary" 
+              icon={<PlusOutlined />}
+              onClick={() => setCreateModalVisible(true)}
+              className="cel-button"
+            >
+              创建分享
+            </Button>
+          )}
+        </Space>
       </div>
 
       <Card className="cel-card">
         <Table
           columns={columns}
-          dataSource={shares}
+          dataSource={showDeleted ? deletedShares : shares}
           rowKey="id"
-          loading={isLoading}
+          loading={showDeleted ? isLoadingDeleted : isLoading}
           pagination={{
             pageSize: 10,
             showSizeChanger: false,

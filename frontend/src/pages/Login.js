@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Form, Input, Button, Card, Typography, message, Alert, Spin } from 'antd';
+import { Form, Input, Button, Card, Typography, message, Spin, Alert } from 'antd';
 import { UserOutlined, LockOutlined, CloudOutlined, ReloadOutlined } from '@ant-design/icons';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -30,12 +30,19 @@ const Login = () => {
 
   const onFinish = async (values) => {
     setLoading(true);
+    
     try {
       const result = await login(values);
       if (result.success) {
         message.success('登录成功！正在跳转...');
         setTimeout(() => navigate('/dashboard'), 1000);
+      } else {
+        // 使用 alert 弹窗显示错误，不改变界面
+        const errorMsg = result.error || '登录失败，请稍后重试';
+        alert(errorMsg);
       }
+    } catch (error) {
+      alert('网络连接异常，请检查网络后重试');
     } finally {
       setLoading(false);
     }
@@ -135,6 +142,8 @@ const Login = () => {
             欢迎使用云存储系统
           </Text>
         </div>
+
+
 
           <Form
             name="login"

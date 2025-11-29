@@ -64,10 +64,10 @@ const Files = () => {
       if (folderId) {
         data.append('folder_id', folderId);
       }
-      // 为FormData请求移除Content-Type，让浏览器自动设置multipart/form-data
+      // 明确设置Content-Type为multipart/form-data
       return api.post('/api/files/upload/', data, {
         headers: {
-          'Content-Type': undefined,
+          'Content-Type': 'multipart/form-data',
         },
       });
     },
@@ -79,8 +79,15 @@ const Files = () => {
         queryClient.invalidateQueries('storage-info');
       },
       onError: (error) => {
-        const errorMsg = error.response?.data?.error || '上传失败';
-        message.error(errorMsg);
+        console.error('Upload error:', error);
+        const errorMsg = error.response?.data?.error || error.message || '上传失败';
+        message.error(`上传失败: ${errorMsg}`);
+        
+        // 如果是认证错误，重定向到登录页
+        if (error.response?.status === 401) {
+          localStorage.removeItem('token');
+          window.location.href = '/login';
+        }
       }
     }
   );
@@ -337,7 +344,7 @@ const Files = () => {
               type="text" 
               icon={<ShareAltOutlined />}
               size="small"
-              onClick={() => handleShareFile(record.id)}
+              onClick={() => handleShareFile(record)}
             />
           </Tooltip>
           <Popconfirm
@@ -375,22 +382,22 @@ const Files = () => {
   };
 
   const [shareModalVisible, setShareModalVisible] = useState(false);
-  const [selectedFileId, setSelectedFileId] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
 
-  const handleShareFile = (fileId) => {
-    setSelectedFileId(fileId);
+  const handleShareFile = (file) => {
+    setSelectedFile(file);
     setShareModalVisible(true);
   };
 
-  const handleShareModalOk = (shareData) => {
+  const handleShareModalOk = () => {
     setShareModalVisible(false);
-    setSelectedFileId(null);
+    setSelectedFile(null);
     queryClient.invalidateQueries('my-shares');
   };
 
   const handleShareModalCancel = () => {
     setShareModalVisible(false);
-    setSelectedFileId(null);
+    setSelectedFile(null);
   };
 
   return (
@@ -507,8 +514,8 @@ const Files = () => {
       <ShareModal
         visible={shareModalVisible}
         onCancel={handleShareModalCancel}
-        onOk={handleShareModalOk}
-        fileId={selectedFileId}
+        onSuccess={handleShareModalOk}
+        file={selectedFile}
       />
     </div>
   );

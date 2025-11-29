@@ -33,7 +33,7 @@ def start_services():
     frontend_dir = Path(__file__).parent.parent / "frontend"
     
     if os.name == 'nt':  # Windows
-        frontend_cmd = f'cd /d {frontend_dir} && set NODE_OPTIONS=--openssl-legacy-provider && set BROWSER=none && npm start'
+        frontend_cmd = f'cd /d {frontend_dir} && set NODE_OPTIONS=--openssl-legacy-provider && set BROWSER=none && npm start -- --host 0.0.0.0'
         subprocess.Popen(['start', 'cmd', '/k', frontend_cmd], shell=True)
     else:
         env = os.environ.copy()
