@@ -11,7 +11,7 @@ import {
 
 const { Sider } = Layout;
 
-const Sidebar = () => {
+const Sidebar = ({ mobileMode = false, onClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -45,6 +45,9 @@ const Sidebar = () => {
 
   const handleMenuClick = ({ key }) => {
     navigate(key);
+    if (mobileMode && onClose) {
+      onClose();
+    }
   };
 
   const getSelectedKey = () => {
@@ -53,15 +56,8 @@ const Sidebar = () => {
     return path;
   };
 
-  return (
-    <Sider
-      width={240}
-      style={{
-        background: 'rgba(255, 255, 255, 0.95)',
-        backdropFilter: 'blur(10px)',
-        borderRight: '1px solid rgba(255, 255, 255, 0.2)',
-      }}
-    >
+  const sidebarContent = (
+    <>
       <div style={{ 
         height: '64px',
         display: 'flex',
@@ -96,6 +92,23 @@ const Sidebar = () => {
           fontSize: '16px'
         }}
       />
+    </>
+  );
+
+  if (mobileMode) {
+    return sidebarContent;
+  }
+
+  return (
+    <Sider
+      width={240}
+      style={{
+        background: 'rgba(255, 255, 255, 0.95)',
+        backdropFilter: 'blur(10px)',
+        borderRight: '1px solid rgba(255, 255, 255, 0.2)',
+      }}
+    >
+      {sidebarContent}
     </Sider>
   );
 };

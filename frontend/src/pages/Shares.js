@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Card, 
   Table, 
@@ -13,7 +13,10 @@ import {
   Tag,
   Typography,
   Popconfirm,
-  Tooltip
+  Tooltip,
+  List,
+  Avatar,
+  Switch
 } from 'antd';
 import { 
   ShareAltOutlined, 
@@ -36,6 +39,18 @@ const Shares = () => {
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [showDeleted, setShowDeleted] = useState(false);
   const [shareForm] = Form.useForm();
+  const [isMobile, setIsMobile] = useState(false);
+
+  // 检测移动设备
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const { data: shares = [], isLoading } = useQuery(
     'my-shares',
@@ -193,19 +208,115 @@ const Shares = () => {
     },
   ];
 
+  // 移动端分享列表项
+  const MobileShareItem = ({ share }) => (
+    <List.Item
+      style={{ padding: '16px 0', borderBottom: '1px solid #f0f0f0' }}
+      actions={[
+        <Button 
+          key="copy"
+          type="text" 
+          size="small" 
+          icon={<CopyOutlined />}
+          onClick={() => {
+            navigator.clipboard.writeText(`${window.location.origin}/share/${share.share_code}`);
+            message.success('分享链接已复制到剪贴板');
+          }}
+        />,
+        <Button 
+          key="view"
+          type="text" 
+          size="small" 
+          icon={<EyeOutlined />}
+          onClick={() => window.open(`/share/${share.share_code}`, '_blank')}
+        />,
+        !share.is_active && (
+          <Tag key="deleted" color="red">已删除</Tag>
+        ),
+        share.is_active && (
+          <Popconfirm
+            key="delete"
+            title="确定删除这个分享吗？"
+            onConfirm={() => deleteMutation.mutate(share.id)}
+            okText="确定"
+            cancelText="取消"
+          >
+            <Button type="text" danger size="small" icon={<DeleteOutlined />} />
+          </Popconfirm>
+        )
+      ].filter(Boolean)}
+    >
+      <List.Item.Meta
+        avatar={
+          <Avatar 
+            icon={getFileIcon(share.file_name)} 
+            style={{ backgroundColor: getFileIconColor(share.file_name) }} 
+          />
+        }
+        title={
+          <Space direction="vertical" size="small">
+            <Text strong>{share.file_name}</Text>
+            <Text type="secondary" style={{ fontSize: '12px' }}>
+              分享码: {share.share_code}
+            </Text>
+          </Space>
+        }
+        description={
+          <Space direction="vertical" size="small" style={{ width: '100%' }}>
+            <Space wrap>
+              <Tag color="blue">{formatBytes(share.file_size)}</Tag>
+              <Tag color="green">
+                {share.download_count}/{share.max_downloads || '∞'} 次下载
+              </Tag>
+              {share.password && <Tag color="orange">有密码</Tag>}
+              {share.is_expired && <Tag color="red">已过期</Tag>}
+            </Space>
+            <Text type="secondary" style={{ fontSize: '12px' }}>
+              创建时间: {formatDateTime(share.created_at)}
+              {share.expire_at && ` | 过期时间: ${formatDateTime(share.expire_at)}`}
+            </Text>
+          </Space>
+        }
+      />
+    </List.Item>
+  );
+
+  const getFileIconColor = (filename) => {
+    const ext = filename.split('.').pop()?.toLowerCase();
+    const colorMap = {
+      'pdf': '#ff6b6b',
+      'doc': '#4facfe',
+      'xls': '#43e97b',
+      'jpg': '#fa709a',
+      'png': '#fee140',
+      'mp4': '#30cfd0',
+      'mp3': '#a8edea',
+      'zip': '#ff9a9e',
+    };
+    return colorMap[ext] || '#667eea';
+  };
+
   return (
     <div>
-      <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Title level={2} style={{ color: '#333', margin: 0 }}>
+      <div style={{ 
+        marginBottom: isMobile ? '16px' : '24px', 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        flexDirection: isMobile ? 'column' : 'row',
+        gap: isMobile ? '12px' : '0'
+      }}>
+        <Title level={isMobile ? 4 : 2} style={{ color: '#333', margin: 0 }}>
           {showDeleted ? '已删除的分享' : '我的分享'}
         </Title>
         
-        <Space>
+        <Space direction={isMobile ? 'vertical' : 'horizontal'} style={{ width: isMobile ? '100%' : 'auto' }}>
           <Button 
             icon={<HistoryOutlined />}
             onClick={() => setShowDeleted(!showDeleted)}
             className={showDeleted ? "cel-button" : ""}
             type={showDeleted ? "primary" : "default"}
+            style={{ width: isMobile ? '100%' : 'auto' }}
           >
             {showDeleted ? '返回当前分享' : '查看已删除'}
           </Button>
@@ -216,6 +327,7 @@ const Shares = () => {
               icon={<PlusOutlined />}
               onClick={() => setCreateModalVisible(true)}
               className="cel-button"
+              style={{ width: isMobile ? '100%' : 'auto' }}
             >
               创建分享
             </Button>
@@ -223,19 +335,40 @@ const Shares = () => {
         </Space>
       </div>
 
-      <Card className="cel-card">
-        <Table
-          columns={columns}
-          dataSource={showDeleted ? deletedShares : shares}
-          rowKey="id"
-          loading={showDeleted ? isLoadingDeleted : isLoading}
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: false,
-            showQuickJumper: true,
-          }}
-        />
-      </Card>
+      {isMobile ? (
+        // 移动端视图
+        <Card className="cel-card" size="small">
+          <List
+            dataSource={showDeleted ? deletedShares : shares}
+            renderItem={MobileShareItem}
+            loading={showDeleted ? isLoadingDeleted : isLoading}
+            size="small"
+            pagination={
+              (showDeleted ? deletedShares : shares)?.length > 10 ? {
+                pageSize: 10,
+                showSizeChanger: false,
+                showQuickJumper: false,
+                simple: true,
+              } : false
+            }
+          />
+        </Card>
+      ) : (
+        // 桌面端视图
+        <Card className="cel-card">
+          <Table
+            columns={columns}
+            dataSource={showDeleted ? deletedShares : shares}
+            rowKey="id"
+            loading={showDeleted ? isLoadingDeleted : isLoading}
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: false,
+              showQuickJumper: true,
+            }}
+          />
+        </Card>
+      )}
 
       {/* 创建分享模态框 */}
       <Modal

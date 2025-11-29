@@ -70,7 +70,7 @@ const Login = () => {
       display: 'flex',
       justifyContent: 'center',
       alignItems: 'center',
-      padding: '20px',
+      padding: '16px',
       background: '#f0f2f5',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
     }}>
@@ -104,10 +104,10 @@ const Login = () => {
       <Card
         style={{
           width: '100%',
-          maxWidth: '360px',
-          padding: '40px 32px',
+          maxWidth: '400px',
+          padding: '24px',
           border: '1px solid #d9d9d9',
-          borderRadius: '8px',
+          borderRadius: '12px',
           boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)'
         }}
         bodyStyle={{ padding: 0 }}

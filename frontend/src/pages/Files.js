@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Card, 
   Button, 
@@ -14,7 +14,9 @@ import {
   Typography,
   Row,
   Col,
-  Tooltip
+  Tooltip,
+  List,
+  Avatar
 } from 'antd';
 import { 
   UploadOutlined, 
@@ -41,6 +43,18 @@ const Files = () => {
   const [uploadModalVisible, setUploadModalVisible] = useState(false);
   const [folderModalVisible, setFolderModalVisible] = useState(false);
   const [folderForm] = Form.useForm();
+  const [isMobile, setIsMobile] = useState(false);
+
+  // 检测移动设备
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const { data: folders = [] } = useQuery(
     ['folders', folderId],
@@ -400,29 +414,122 @@ const Files = () => {
     setSelectedFile(null);
   };
 
+  // 移动端文件夹列表项
+  const MobileFolderItem = ({ folder }) => (
+    <List.Item
+      style={{ 
+        padding: '12px 0',
+        borderBottom: '1px solid #f0f0f0',
+        cursor: 'pointer'
+      }}
+      onClick={() => navigate(`/files/${folder.id}`)}
+      actions={[
+        <Popconfirm
+          key="delete"
+          title="确定删除这个文件夹吗？"
+          onConfirm={() => deleteFolderMutation.mutate(folder.id)}
+          okText="确定"
+          cancelText="取消"
+        >
+          <Button type="text" danger size="small" icon={<DeleteOutlined />} />
+        </Popconfirm>
+      ]}
+    >
+      <List.Item.Meta
+        avatar={<Avatar icon={<FolderOutlined />} style={{ backgroundColor: '#fa709a' }} />}
+        title={folder.name}
+        description={`${folder.children_count} 个子文件夹, ${folder.files_count} 个文件`}
+      />
+    </List.Item>
+  );
+
+  // 移动端文件列表项
+  const MobileFileItem = ({ file }) => (
+    <List.Item
+      style={{ padding: '12px 0', borderBottom: '1px solid #f0f0f0' }}
+      actions={[
+        <Button 
+          key="download"
+          type="text" 
+          size="small" 
+          icon={<CloudDownloadOutlined />}
+          onClick={() => downloadFile(file)}
+        />,
+        <Button 
+          key="share"
+          type="text" 
+          size="small" 
+          icon={<ShareAltOutlined />}
+          onClick={() => handleShareFile(file)}
+        />,
+        <Popconfirm
+          key="delete"
+          title="确定删除这个文件吗？"
+          onConfirm={() => deleteFileMutation.mutate(file.id)}
+          okText="确定"
+          cancelText="取消"
+        >
+          <Button type="text" danger size="small" icon={<DeleteOutlined />} />
+        </Popconfirm>
+      ]}
+    >
+      <List.Item.Meta
+        avatar={
+          <Avatar 
+            icon={<FileOutlined />} 
+            style={{ backgroundColor: getFileIconColor(file.file_extension) }} 
+          />
+        }
+        title={
+          <Tooltip title={file.original_name}>
+            <Text ellipsis style={{ maxWidth: '200px' }}>{file.name}</Text>
+          </Tooltip>
+        }
+        description={
+          <Space direction="vertical" size="small">
+            <Text type="secondary">{file.size_display}</Text>
+            <Tag color="blue" size="small">{file.file_type || '未知'}</Tag>
+            <Text type="secondary" style={{ fontSize: '12px' }}>
+              {new Date(file.created_at).toLocaleString()}
+            </Text>
+          </Space>
+        }
+      />
+    </List.Item>
+  );
+
   return (
     <div>
-      <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Space>
+      <div style={{ 
+        marginBottom: isMobile ? '16px' : '24px', 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        flexDirection: isMobile ? 'column' : 'row',
+        gap: isMobile ? '12px' : '0'
+      }}>
+        <Space direction={isMobile ? 'vertical' : 'horizontal'} style={{ width: isMobile ? '100%' : 'auto' }}>
           {folderId && (
             <Button 
               icon={<ArrowLeftOutlined />} 
               onClick={() => navigate('/files')}
+              style={{ width: isMobile ? '100%' : 'auto' }}
             >
               返回上级
             </Button>
           )}
-          <Title level={2} style={{ color: '#333', margin: 0 }}>
+          <Title level={isMobile ? 4 : 2} style={{ color: '#333', margin: 0 }}>
             我的文件
           </Title>
         </Space>
         
-        <Space>
+        <Space direction={isMobile ? 'vertical' : 'horizontal'} style={{ width: isMobile ? '100%' : 'auto' }}>
           <Button 
             type="primary" 
             icon={<UploadOutlined />}
             onClick={() => setUploadModalVisible(true)}
             className="cel-button"
+            style={{ width: isMobile ? '100%' : 'auto' }}
           >
             上传文件
           </Button>
@@ -430,43 +537,78 @@ const Files = () => {
             icon={<FolderAddOutlined />}
             onClick={() => setFolderModalVisible(true)}
             className="cel-button"
+            style={{ width: isMobile ? '100%' : 'auto' }}
           >
             新建文件夹
           </Button>
         </Space>
       </div>
 
-      <Row gutter={[24, 24]}>
-        <Col span={24}>
-          <Card className="cel-card" title="文件夹">
-            <Table
-              columns={folderColumns}
-              dataSource={folders}
-              rowKey="id"
-              pagination={false}
-              size="small"
-            />
-          </Card>
-        </Col>
-
-        <Col span={24}>
-          <Card className="cel-card" title="文件">
-            <Table
-              columns={fileColumns}
+      {isMobile ? (
+        // 移动端视图
+        <Space direction="vertical" style={{ width: '100%' }} size="large">
+          {folders.length > 0 && (
+            <Card className="cel-card" title="文件夹" size="small">
+              <List
+                dataSource={folders}
+                renderItem={MobileFolderItem}
+                size="small"
+              />
+            </Card>
+          )}
+          
+          <Card className="cel-card" title="文件" size="small">
+            <List
               dataSource={filesData?.results || filesData || []}
-              rowKey="id"
+              renderItem={MobileFileItem}
               loading={isLoading}
-              pagination={{
-                total: filesData?.count,
-                pageSize: 20,
-                showSizeChanger: false,
-                showQuickJumper: true,
-              }}
               size="small"
+              pagination={
+                filesData?.count > 20 ? {
+                  total: filesData?.count,
+                  pageSize: 20,
+                  showSizeChanger: false,
+                  showQuickJumper: false,
+                  simple: true,
+                } : false
+              }
             />
           </Card>
-        </Col>
-      </Row>
+        </Space>
+      ) : (
+        // 桌面端视图
+        <Row gutter={[24, 24]}>
+          <Col span={24}>
+            <Card className="cel-card" title="文件夹">
+              <Table
+                columns={folderColumns}
+                dataSource={folders}
+                rowKey="id"
+                pagination={false}
+                size="small"
+              />
+            </Card>
+          </Col>
+
+          <Col span={24}>
+            <Card className="cel-card" title="文件">
+              <Table
+                columns={fileColumns}
+                dataSource={filesData?.results || filesData || []}
+                rowKey="id"
+                loading={isLoading}
+                pagination={{
+                  total: filesData?.count,
+                  pageSize: 20,
+                  showSizeChanger: false,
+                  showQuickJumper: true,
+                }}
+                size="small"
+              />
+            </Card>
+          </Col>
+        </Row>
+      )}
 
       {/* 上传文件模态框 */}
       <Modal

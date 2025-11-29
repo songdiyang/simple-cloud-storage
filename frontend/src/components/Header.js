@@ -1,12 +1,12 @@
 import React from 'react';
-import { Layout, Avatar, Dropdown, Space, Typography } from 'antd';
-import { UserOutlined, LogoutOutlined, SettingOutlined } from '@ant-design/icons';
+import { Layout, Avatar, Dropdown, Space, Typography, Button } from 'antd';
+import { UserOutlined, LogoutOutlined, SettingOutlined, MenuOutlined } from '@ant-design/icons';
 import { useAuth } from '../contexts/AuthContext';
 
 const { Header: AntHeader } = Layout;
 const { Text } = Typography;
 
-const Header = () => {
+const Header = ({ showMenuButton = false, onMenuClick }) => {
   const { user, logout } = useAuth();
 
   const menuItems = [
@@ -30,32 +30,50 @@ const Header = () => {
   return (
     <AntHeader 
       style={{ 
-        padding: '0 24px', 
+        padding: '0 16px', 
         background: 'rgba(255, 255, 255, 0.95)',
         backdropFilter: 'blur(10px)',
         borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
         display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'center'
+        alignItems: 'center',
+        minHeight: '64px'
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center' }}>
+        {showMenuButton && (
+          <Button
+            type="text"
+            icon={<MenuOutlined />}
+            onClick={onMenuClick}
+            style={{ 
+              marginRight: '12px',
+              fontSize: '18px',
+              height: '40px',
+              width: '40px'
+            }}
+          />
+        )}
         <div style={{
-          width: '40px',
-          height: '40px',
+          width: showMenuButton ? '32px' : '40px',
+          height: showMenuButton ? '32px' : '40px',
           background: 'linear-gradient(145deg, #ff6b6b, #ff8e53)',
-          borderRadius: '12px',
+          borderRadius: showMenuButton ? '8px' : '12px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           color: 'white',
-          fontSize: '20px',
+          fontSize: showMenuButton ? '16px' : '20px',
           fontWeight: 'bold',
           marginRight: '12px'
         }}>
           ☁
         </div>
-        <Text style={{ fontSize: '20px', fontWeight: 'bold', color: '#333' }}>
+        <Text style={{ 
+          fontSize: showMenuButton ? '18px' : '20px', 
+          fontWeight: 'bold', 
+          color: '#333' 
+        }}>
           云盘系统
         </Text>
       </div>
