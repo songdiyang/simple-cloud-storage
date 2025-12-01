@@ -15,7 +15,8 @@ from .serializers import (
     FolderSerializer, FileSerializer, FileShareSerializer,
     CreateFolderSerializer, UploadFileSerializer
 )
-from .utils import upload_file_to_swift, delete_file_from_swift, generate_share_code, download_file_from_swift
+from .utils import upload_file_to_swift, delete_file_from_swift, generate_share_code, download_file_from_swift, upload_file_to_local
+from django.conf import settings
 
 
 @api_view(['GET'])
@@ -105,12 +106,36 @@ def upload_file(request):
                 object_name = f"{request.user.id}/{uuid.uuid4()}/{uploaded_file.name}"
                 container_name = f"user_{request.user.id}_files"
                 
-                # 上传到Swift
-                success, result = upload_file_to_swift(uploaded_file, container_name, object_name)
-                if not success:
-                    return Response({
-                        'error': f'Swift上传失败: {result}。请检查Swift服务状态。'
-                    }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+                # 尝试上传到Swift，如果失败则使用本地存储
+                swift_success, swift_result = upload_file_to_swift(uploaded_file, container_name, object_name)
+                
+                if not swift_success:
+                    # Swift失败，尝试本地存储
+                    if getattr(settings, 'LOCAL_STORAGE_ENABLED', False):
+                        try:
+                            local_success, local_result = upload_file_to_local(uploaded_file, request.user.id, uploaded_file.name)
+                            if local_success:
+                                # 使用本地存储路径
+                                swift_container = None
+                                swift_object = None
+                                local_path = local_result
+                            else:
+                                return Response({
+                                    'error': f'Swift和本地存储都失败: Swift错误({swift_result}), 本地错误({local_result})'
+                                }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+                        except Exception as local_error:
+                            return Response({
+                                'error': f'Swift上传失败且本地存储异常: {swift_result}, 本地错误: {str(local_error)}'
+                            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+                    else:
+                        return Response({
+                            'error': f'Swift上传失败: {swift_result}。请检查Swift服务状态。'
+                        }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+                else:
+                    # Swift成功
+                    swift_container = container_name
+                    swift_object = object_name
+                    local_path = None
                 
                 # 创建文件记录
                 file_obj = File.objects.create(
@@ -121,8 +146,9 @@ def upload_file(request):
                     size=uploaded_file.size,
                     file_type=os.path.splitext(uploaded_file.name)[1],
                     mime_type=uploaded_file.content_type or 'application/octet-stream',
-                    swift_container=container_name,
-                    swift_object=object_name
+                    swift_container=swift_container,
+                    swift_object=swift_object,
+                    local_path=local_path
                 )
                 
                 # 更新用户存储使用量

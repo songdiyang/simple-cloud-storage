@@ -172,8 +172,8 @@ SWIFT_CONFIG = {
     'cacert': os.getenv('OS_CACERT', None),
 }
 
-# Local file storage settings (disabled - using Swift only)
-LOCAL_STORAGE_ENABLED = False
+# Local file storage settings (enabled as backup)
+LOCAL_STORAGE_ENABLED = True
 LOCAL_STORAGE_PATH = os.path.join(BASE_DIR, 'local_storage')
 
 # Celery settings

@@ -237,7 +237,7 @@ const Shares = () => {
           <Popconfirm
             key="delete"
             title="确定删除这个分享吗？"
-            onConfirm={() => deleteMutation.mutate(share.id)}
+            onConfirm={() => deleteShareMutation.mutate(share.id)}
             okText="确定"
             cancelText="取消"
           >
