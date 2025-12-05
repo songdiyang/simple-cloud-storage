@@ -15,6 +15,7 @@ const Sidebar = ({ mobileMode = false, onClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // 普通用户菜单（管理员有独立界面）
   const menuItems = [
     {
       key: '/dashboard',

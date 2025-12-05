@@ -1,6 +1,6 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { Layout, Drawer } from 'antd';
+import { Layout, Drawer, Result, Button } from 'antd';
 import { CloudOutlined } from '@ant-design/icons';
 import './App.css';
 
@@ -17,7 +17,55 @@ import Profile from './pages/Profile';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 
+// 管理后台页面
+import { 
+  AdminLayout, 
+  AdminDashboard, 
+  AdminUsers, 
+  AdminVIP, 
+  AdminLogs 
+} from './pages/admin';
+
 const { Content } = Layout;
+
+// 检查是否为管理员
+const isAdminUser = (user) => {
+  return user?.is_admin_user || user?.role === 'admin' || user?.is_superuser;
+};
+
+// 管理员路由保护组件
+const AdminRoute = ({ children }) => {
+  const { user } = useAuth();
+  
+  if (!isAdminUser(user)) {
+    return (
+      <Result
+        status="403"
+        title="无权访问"
+        subTitle="抱歉，您没有权限访问管理后台"
+        extra={
+          <Button type="primary" href="/dashboard">
+            返回首页
+          </Button>
+        }
+      />
+    );
+  }
+  
+  return <AdminLayout>{children}</AdminLayout>;
+};
+
+// 普通用户路由保护组件（管理员不能访问）
+const UserRoute = ({ children }) => {
+  const { user } = useAuth();
+  
+  // 管理员重定向到管理后台
+  if (isAdminUser(user)) {
+    return <Navigate to="/admin" replace />;
+  }
+  
+  return children;
+};
 
 function App() {
   const { user, loading } = useAuth();
@@ -40,11 +88,27 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/share/:shareCode" element={<ShareView />} />
+        <Route path="/admin/*" element={<Navigate to="/login" replace />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     );
   }
 
+  // 管理员登录后直接进入管理后台
+  if (isAdminUser(user)) {
+    return (
+      <Routes>
+        <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+        <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
+        <Route path="/admin/vip" element={<AdminRoute><AdminVIP /></AdminRoute>} />
+        <Route path="/admin/logs" element={<AdminRoute><AdminLogs /></AdminRoute>} />
+        <Route path="/share/:shareCode" element={<ShareView />} />
+        <Route path="*" element={<Navigate to="/admin" replace />} />
+      </Routes>
+    );
+  }
+
+  // 普通用户界面
   const sidebarContent = <Sidebar mobileMode={true} onClose={() => setDrawerVisible(false)} />;
 
   return (

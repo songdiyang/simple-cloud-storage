@@ -11,12 +11,19 @@ import {
   Row,
   Col,
   Space,
-  Progress
+  Progress,
+  Modal,
+  Tag,
+  Result,
+  Divider
 } from 'antd';
 import { 
   UserOutlined, 
   UploadOutlined, 
-  SaveOutlined 
+  SaveOutlined,
+  CrownOutlined,
+  GiftOutlined,
+  CheckCircleOutlined
 } from '@ant-design/icons';
 import { useAuth } from '../contexts/AuthContext';
 import { useQuery } from 'react-query';
@@ -28,9 +35,20 @@ const Profile = () => {
   const { user, updateProfile } = useAuth();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  
+  // VIP 相关状态
+  const [showVipModal, setShowVipModal] = useState(false);
+  const [vipStep, setVipStep] = useState('info'); // 'info' | 'form' | 'success'
+  const [orderNumber, setOrderNumber] = useState('');
+  const [applyLoading, setApplyLoading] = useState(false);
 
   const { data: storageInfo } = useQuery('storage-info', () =>
     api.get('/api/files/storage/').then(res => res.data)
+  );
+  
+  // 获取 VIP 状态
+  const { data: vipStatus, refetch: refetchVipStatus } = useQuery('vip-status', () =>
+    api.get('/api/auth/vip/status/').then(res => res.data)
   );
 
   React.useEffect(() => {
@@ -80,6 +98,158 @@ const Profile = () => {
     }
     
     return false; // 阻止默认上传行为
+  };
+  
+  // VIP 申请提交
+  const handleVipApply = async () => {
+    if (!orderNumber.trim()) {
+      message.error('请输入赞助单号');
+      return;
+    }
+    
+    try {
+      setApplyLoading(true);
+      await api.post('/api/auth/vip/apply/', { order_number: orderNumber });
+      setVipStep('success');
+      refetchVipStatus();
+    } catch (error) {
+      message.error(error.response?.data?.error || '申请提交失败');
+    } finally {
+      setApplyLoading(false);
+    }
+  };
+  
+  // 关闭 VIP 弹窗
+  const handleCloseVipModal = () => {
+    setShowVipModal(false);
+    setVipStep('info');
+    setOrderNumber('');
+  };
+  
+  // VIP 弹窗内容
+  const renderVipModalContent = () => {
+    if (vipStep === 'success') {
+      return (
+        <Result
+          icon={<CheckCircleOutlined style={{ color: '#52c41a' }} />}
+          title="感谢您的支持！"
+          subTitle="管理员审核后将为您扩容存储空间至 5GB"
+          extra={
+            <Button type="primary" onClick={handleCloseVipModal} className="cel-button">
+              知道了
+            </Button>
+          }
+        />
+      );
+    }
+    
+    if (vipStep === 'form') {
+      return (
+        <div style={{ textAlign: 'center', padding: '20px 0' }}>
+          <GiftOutlined style={{ fontSize: 48, color: '#ffd700', marginBottom: 16 }} />
+          <Title level={4}>输入赞助单号</Title>
+          <Text type="secondary" style={{ display: 'block', marginBottom: 24 }}>
+            请输入您的赞助订单号，管理员将在审核后为您开通 VIP
+          </Text>
+          <Input
+            placeholder="请输入赞助单号"
+            value={orderNumber}
+            onChange={(e) => setOrderNumber(e.target.value)}
+            style={{ 
+              maxWidth: 300, 
+              marginBottom: 24,
+              borderRadius: 8,
+              border: '2px solid #667eea'
+            }}
+            size="large"
+          />
+          <div>
+            <Space>
+              <Button onClick={() => setVipStep('info')}>
+                返回
+              </Button>
+              <Button 
+                type="primary" 
+                onClick={handleVipApply}
+                loading={applyLoading}
+                className="cel-button"
+                style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
+              >
+                提交申请
+              </Button>
+            </Space>
+          </div>
+        </div>
+      );
+    }
+    
+    // 默认显示赞助信息
+    return (
+      <div style={{ textAlign: 'center' }}>
+        {/* 赞助图片区域 - 赛璐璐风格边框 */}
+        <div style={{
+          border: '3px solid #333',
+          borderRadius: 16,
+          padding: 20,
+          marginBottom: 24,
+          background: 'linear-gradient(135deg, #fff9e6 0%, #fff3cd 100%)',
+          boxShadow: '4px 4px 0 #333'
+        }}>
+          <CrownOutlined style={{ fontSize: 64, color: '#ffd700', marginBottom: 16 }} />
+          <Title level={3} style={{ margin: 0, color: '#333' }}>成为 VIP 用户</Title>
+          <Divider />
+          
+          {/* 赞助图片占位符 */}
+          <div style={{
+            border: '2px dashed #999',
+            borderRadius: 12,
+            padding: 40,
+            marginBottom: 20,
+            background: '#f5f5f5'
+          }}>
+            <img 
+              src="/sponsor.png" 
+              alt="赞助二维码"
+              style={{ maxWidth: '100%', maxHeight: 200 }}
+              onError={(e) => {
+                e.target.style.display = 'none';
+                e.target.nextSibling.style.display = 'block';
+              }}
+            />
+            <div style={{ display: 'none', color: '#999' }}>
+              <GiftOutlined style={{ fontSize: 48, marginBottom: 8 }} />
+              <div>赞助图片</div>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                请将图片放置在 frontend/public/sponsor.png
+              </Text>
+            </div>
+          </div>
+          
+          <Space direction="vertical" size="small">
+            <Text strong style={{ fontSize: 16 }}>✨ VIP 特权 ✨</Text>
+            <Text>📦 存储空间从 200MB 扩容至 <Text strong style={{ color: '#667eea' }}>5GB</Text></Text>
+            <Text>🚀 尊享 VIP 专属标识</Text>
+          </Space>
+        </div>
+        
+        <Button 
+          type="primary" 
+          size="large"
+          icon={<CrownOutlined />}
+          onClick={() => setVipStep('form')}
+          className="cel-button"
+          style={{ 
+            background: 'linear-gradient(135deg, #ffd700 0%, #ffb700 100%)',
+            border: '2px solid #333',
+            color: '#333',
+            fontWeight: 'bold',
+            boxShadow: '3px 3px 0 #333'
+          }}
+        >
+          我已赞助，填写单号
+        </Button>
+      </div>
+    );
   };
 
   const handleDeleteAvatar = async () => {
@@ -159,6 +329,36 @@ const Profile = () => {
               <div>
                 <Text type="secondary">用户名</Text>
                 <div style={{ fontWeight: 'bold' }}>{user?.username}</div>
+              </div>
+              <div>
+                <Text type="secondary">用户等级</Text>
+                <div>
+                  {vipStatus?.is_vip ? (
+                    <Tag color="gold" icon={<CrownOutlined />} style={{ 
+                      border: '2px solid #333',
+                      fontWeight: 'bold'
+                    }}>
+                      VIP用户
+                    </Tag>
+                  ) : (
+                    <Space>
+                      <Tag color="default">普通用户</Tag>
+                      {!vipStatus?.has_pending_application ? (
+                        <Button 
+                          type="link" 
+                          size="small"
+                          icon={<CrownOutlined />}
+                          onClick={() => setShowVipModal(true)}
+                          style={{ color: '#ffd700', padding: 0 }}
+                        >
+                          升级VIP
+                        </Button>
+                      ) : (
+                        <Tag color="processing">审核中</Tag>
+                      )}
+                    </Space>
+                  )}
+                </div>
               </div>
               <div>
                 <Text type="secondary">注册时间</Text>
@@ -261,9 +461,59 @@ const Profile = () => {
                 format={(percent) => `${percent?.toFixed(1)}%`}
               />
             </div>
+            
+            {/* VIP 升级入口 */}
+            {!vipStatus?.is_vip && (
+              <div style={{ 
+                marginTop: 24, 
+                padding: 16, 
+                background: 'linear-gradient(135deg, #fff9e6 0%, #fff3cd 100%)',
+                borderRadius: 12,
+                border: '2px solid #ffd700',
+                textAlign: 'center'
+              }}>
+                <CrownOutlined style={{ fontSize: 24, color: '#ffd700', marginBottom: 8 }} />
+                <div>
+                  <Text strong>升级 VIP 获取 5GB 存储空间</Text>
+                </div>
+                <Button 
+                  type="primary"
+                  icon={<CrownOutlined />}
+                  onClick={() => setShowVipModal(true)}
+                  style={{ 
+                    marginTop: 12,
+                    background: 'linear-gradient(135deg, #ffd700 0%, #ffb700 100%)',
+                    border: '2px solid #333',
+                    color: '#333',
+                    fontWeight: 'bold'
+                  }}
+                  disabled={vipStatus?.has_pending_application}
+                >
+                  {vipStatus?.has_pending_application ? '申请审核中' : '成为 VIP'}
+                </Button>
+              </div>
+            )}
           </Card>
         </Col>
       </Row>
+      
+      {/* VIP 申请弹窗 */}
+      <Modal
+        title={
+          <Space>
+            <CrownOutlined style={{ color: '#ffd700' }} />
+            <span>成为 VIP 用户</span>
+          </Space>
+        }
+        open={showVipModal}
+        onCancel={handleCloseVipModal}
+        footer={null}
+        width={500}
+        centered
+        className="cel-modal"
+      >
+        {renderVipModalContent()}
+      </Modal>
     </div>
   );
 };
