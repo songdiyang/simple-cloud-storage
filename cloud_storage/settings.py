@@ -176,6 +176,18 @@ SWIFT_CONFIG = {
 LOCAL_STORAGE_ENABLED = True
 LOCAL_STORAGE_PATH = os.path.join(BASE_DIR, 'local_storage')
 
+# Cache settings (for password attempt limiting)
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+    }
+}
+
+# Password attempt settings
+PASSWORD_MAX_ATTEMPTS = 3  # 最大尝试次数
+PASSWORD_LOCKOUT_TIME = 300  # 锁定时间（秒）- 5分钟
+
 # Celery settings
 CELERY_BROKER_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
 CELERY_RESULT_BACKEND = os.getenv('REDIS_URL', 'redis://localhost:6379/0')

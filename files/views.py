@@ -17,6 +17,57 @@ from .serializers import (
 )
 from .utils import upload_file_to_swift, delete_file_from_swift, generate_share_code, download_file_from_swift, upload_file_to_local
 from django.conf import settings
+from django.core.cache import cache
+
+
+def get_client_ip(request):
+    """获取客户端IP地址"""
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
+
+
+def get_password_attempt_key(share_code, ip):
+    """生成密码尝试缓存键"""
+    return f'password_attempt_{share_code}_{ip}'
+
+
+def check_password_attempts(share_code, request):
+    """检查密码尝试次数，返回 (is_locked, attempts, remaining, lockout_time)"""
+    ip = get_client_ip(request)
+    cache_key = get_password_attempt_key(share_code, ip)
+    
+    max_attempts = getattr(settings, 'PASSWORD_MAX_ATTEMPTS', 3)
+    lockout_time = getattr(settings, 'PASSWORD_LOCKOUT_TIME', 300)
+    
+    attempts = cache.get(cache_key, 0)
+    remaining = max_attempts - attempts
+    is_locked = attempts >= max_attempts
+    
+    return is_locked, attempts, remaining, lockout_time
+
+
+def record_failed_attempt(share_code, request):
+    """记录失败的密码尝试"""
+    ip = get_client_ip(request)
+    cache_key = get_password_attempt_key(share_code, ip)
+    
+    lockout_time = getattr(settings, 'PASSWORD_LOCKOUT_TIME', 300)
+    
+    attempts = cache.get(cache_key, 0)
+    cache.set(cache_key, attempts + 1, lockout_time)
+    
+    return attempts + 1
+
+
+def clear_password_attempts(share_code, request):
+    """清除密码尝试记录（密码正确时调用）"""
+    ip = get_client_ip(request)
+    cache_key = get_password_attempt_key(share_code, ip)
+    cache.delete(cache_key)
 
 
 @api_view(['GET'])
@@ -267,11 +318,6 @@ def delete_share(request, share_id):
 
 
 
-
-
-
-
-
 @api_view(['GET'])
 @permission_classes([])  # 公开访问，不需要认证
 def download_shared_file_temp(request, share_code):
@@ -317,7 +363,6 @@ def download_shared_file_temp(request, share_code):
         
     except (FileShare.DoesNotExist, FileNotFoundError):
         raise Http404('文件不存在')
-
 
 
 
@@ -532,6 +577,87 @@ def download_file(request, file_id):
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+@api_view(['POST'])
+@permission_classes([])  # 无需认证
+def verify_share_password(request, share_code):
+    """验证分享文件密码"""
+    try:
+        share = FileShare.objects.get(
+            share_code=share_code,
+            is_active=True
+        )
+        
+        # 检查是否过期
+        if share.is_expired():
+            return Response({
+                'error': '分享已过期',
+                'is_expired': True
+            }, status=status.HTTP_410_GONE)
+        
+        # 如果没有密码保护，直接返回成功
+        if not share.password:
+            return Response({
+                'success': True,
+                'message': '该文件不需要密码'
+            })
+        
+        # 检查密码尝试次数
+        is_locked, attempts, remaining, lockout_time = check_password_attempts(share_code, request)
+        
+        if is_locked:
+            return Response({
+                'error': f'密码尝试次数过多，请{lockout_time // 60}分钟后再试',
+                'is_locked': True,
+                'lockout_time': lockout_time,
+                'attempts': attempts,
+                'remaining': 0
+            }, status=status.HTTP_429_TOO_MANY_REQUESTS)
+        
+        # 验证密码
+        password = request.data.get('password', '')
+        if password == share.password:
+            # 密码正确，清除尝试记录
+            clear_password_attempts(share_code, request)
+            return Response({
+                'success': True,
+                'message': '密码正确',
+                'file_name': share.file.original_name,
+                'file_size': share.file.size,
+                'file_type': share.file.file_type,
+                'download_count': share.download_count,
+                'max_downloads': share.max_downloads,
+                'expire_at': share.expire_at.isoformat() if share.expire_at else None,
+                'created_at': share.created_at.isoformat(),
+                'share_code': share.share_code
+            })
+        else:
+            # 密码错误，记录失败尝试
+            new_attempts = record_failed_attempt(share_code, request)
+            max_attempts = getattr(settings, 'PASSWORD_MAX_ATTEMPTS', 3)
+            new_remaining = max_attempts - new_attempts
+            
+            if new_remaining <= 0:
+                return Response({
+                    'error': f'密码错误，尝试次数已用完，请{lockout_time // 60}分钟后再试',
+                    'is_locked': True,
+                    'lockout_time': lockout_time,
+                    'attempts': new_attempts,
+                    'remaining': 0
+                }, status=status.HTTP_429_TOO_MANY_REQUESTS)
+            else:
+                return Response({
+                    'error': f'密码错误，还剩{new_remaining}次尝试机会',
+                    'success': False,
+                    'attempts': new_attempts,
+                    'remaining': new_remaining
+                }, status=status.HTTP_403_FORBIDDEN)
+                
+    except FileShare.DoesNotExist:
+        return Response({
+            'error': '分享不存在'
+        }, status=status.HTTP_404_NOT_FOUND)
+
+
 @api_view(['GET'])
 @permission_classes([])  # 无需认证
 def get_share_info(request, share_code):
@@ -549,13 +675,26 @@ def get_share_info(request, share_code):
                 'is_expired': True
             }, status=status.HTTP_410_GONE)
         
-        # 检查是否需要密码
-        password = request.GET.get('password', '')
-        if share.password and password != share.password:
+        # 检查密码尝试次数
+        is_locked, attempts, remaining, lockout_time = check_password_attempts(share_code, request)
+        
+        if is_locked:
             return Response({
-                'error': '需要密码',
-                'password_required': True
-            }, status=status.HTTP_403_FORBIDDEN)
+                'error': f'密码尝试次数过多，请{lockout_time // 60}分钟后再试',
+                'is_locked': True,
+                'lockout_time': lockout_time
+            }, status=status.HTTP_429_TOO_MANY_REQUESTS)
+        
+        # 如果有密码保护，返回需要密码的提示
+        if share.password:
+            password = request.GET.get('password', '')
+            if password != share.password:
+                return Response({
+                    'error': '需要密码',
+                    'password_required': True,
+                    'share_code': share.share_code,
+                    'remaining_attempts': remaining
+                }, status=status.HTTP_403_FORBIDDEN)
         
         return Response({
             'id': share.id,
@@ -593,12 +732,39 @@ def download_shared_file(request, share_code):
                 'error': '分享已过期'
             }, status=status.HTTP_410_GONE)
         
+        # 检查密码尝试次数
+        is_locked, attempts, remaining, lockout_time = check_password_attempts(share_code, request)
+        
+        if is_locked:
+            return Response({
+                'error': f'密码尝试次数过多，请{lockout_time // 60}分钟后再试',
+                'is_locked': True,
+                'lockout_time': lockout_time
+            }, status=status.HTTP_429_TOO_MANY_REQUESTS)
+        
         # 检查密码
         password = request.data.get('password', '')
         if share.password and password != share.password:
-            return Response({
-                'error': '密码错误'
-            }, status=status.HTTP_403_FORBIDDEN)
+            # 记录失败尝试
+            new_attempts = record_failed_attempt(share_code, request)
+            max_attempts = getattr(settings, 'PASSWORD_MAX_ATTEMPTS', 3)
+            new_remaining = max_attempts - new_attempts
+            
+            if new_remaining <= 0:
+                return Response({
+                    'error': f'密码错误，尝试次数已用完，请{lockout_time // 60}分钟后再试',
+                    'is_locked': True,
+                    'remaining': 0
+                }, status=status.HTTP_429_TOO_MANY_REQUESTS)
+            else:
+                return Response({
+                    'error': f'密码错误，还剩{new_remaining}次尝试机会',
+                    'remaining': new_remaining
+                }, status=status.HTTP_403_FORBIDDEN)
+        
+        # 密码正确，清除尝试记录
+        if share.password:
+            clear_password_attempts(share_code, request)
         
         # 检查下载次数
         if share.max_downloads and share.download_count >= share.max_downloads:

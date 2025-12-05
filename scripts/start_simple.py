@@ -45,20 +45,20 @@ class ServiceManager:
         print("🎨 启动前端服务...")
         frontend_dir = Path(__file__).parent.parent / "frontend"
         
+        env = os.environ.copy()
+        env['NODE_OPTIONS'] = '--openssl-legacy-provider'
+        env['BROWSER'] = 'none'
+        
         if os.name == 'nt':  # Windows
-            env = os.environ.copy()
-            env['NODE_OPTIONS'] = '--openssl-legacy-provider'
-            env['BROWSER'] = 'none'
+            # Windows 上需要使用 shell=True 或 npm.cmd
             self.frontend_process = subprocess.Popen(
-                ['npm', 'start', '--', '--host', '0.0.0.0'], 
+                'npm start -- --host 0.0.0.0', 
                 cwd=frontend_dir,
                 env=env,
+                shell=True,
                 creationflags=subprocess.CREATE_NEW_CONSOLE if hasattr(subprocess, 'CREATE_NEW_CONSOLE') else 0
             )
         else:
-            env = os.environ.copy()
-            env['NODE_OPTIONS'] = '--openssl-legacy-provider'
-            env['BROWSER'] = 'none'
             self.frontend_process = subprocess.Popen(['npm', 'start'], cwd=frontend_dir, env=env)
         
         print("✅ 前端服务启动中: http://localhost:3000")

@@ -11,7 +11,8 @@ import {
   Descriptions,
   Modal,
   Typography,
-  Alert
+  Alert,
+  Result
 } from 'antd';
 import { 
   SearchOutlined, 
@@ -21,7 +22,10 @@ import {
   CloudUploadOutlined,
   SaveOutlined,
   FolderOutlined,
-  EyeOutlined
+  EyeOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  ExclamationCircleOutlined
 } from '@ant-design/icons';
 import api from '../services/api';
 import FolderSelector from '../components/FolderSelector';
@@ -40,6 +44,15 @@ const FileSearch = () => {
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showFolderSelector, setShowFolderSelector] = useState(false);
+  
+  // 密码验证相关状态
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordVerifying, setPasswordVerifying] = useState(false);
+  const [remainingAttempts, setRemainingAttempts] = useState(3);
+  const [isLocked, setIsLocked] = useState(false);
+  const [lockoutTime, setLockoutTime] = useState(0);
+  const [passwordVerified, setPasswordVerified] = useState(false);
+  const [pendingShareCode, setPendingShareCode] = useState('');
 
   const handleSearch = async () => {
     if (!shareCode.trim()) {
@@ -73,12 +86,24 @@ const FileSearch = () => {
       setShareCode('');
       setPasswordInput('');
       setPasswordRequired(false);
+      setPasswordVerified(false);
       message.success('文件信息获取成功！');
       
     } catch (error) {
-      if (error.response?.status === 403 && error.response?.data?.error === '需要密码') {
-        setPasswordRequired(true);
-        message.warning('该分享文件需要密码，请输入密码后重试');
+      if (error.response?.status === 403 && error.response?.data?.password_required) {
+        // 需要密码，打开密码验证模态框
+        setPendingShareCode(shareCode.trim());
+        setRemainingAttempts(error.response?.data?.remaining_attempts || 3);
+        setIsLocked(false);
+        setPasswordVerified(false);
+        setPasswordInput('');
+        setShowPasswordModal(true);
+      } else if (error.response?.status === 429) {
+        // 尝试次数过多，被锁定
+        setIsLocked(true);
+        setLockoutTime(error.response?.data?.lockout_time || 300);
+        setPendingShareCode(shareCode.trim());
+        setShowPasswordModal(true);
       } else if (error.response?.status === 404) {
         message.error('分享码不存在或已过期');
       } else {
@@ -87,6 +112,78 @@ const FileSearch = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // 密码验证函数
+  const handleVerifyPassword = async () => {
+    if (!passwordInput.trim()) {
+      message.error('请输入密码');
+      return;
+    }
+
+    try {
+      setPasswordVerifying(true);
+      
+      const response = await api.post(`/api/files/share/${pendingShareCode}/verify-password/`, {
+        password: passwordInput
+      });
+      
+      if (response.data.success) {
+        // 密码正确
+        setPasswordVerified(true);
+        setRemainingAttempts(3);
+        message.success('密码正确！');
+        
+        // 将文件信息添加到搜索结果
+        const fileInfo = response.data;
+        setSearchResults(prev => {
+          const exists = prev.find(item => item.share_code === pendingShareCode);
+          if (exists) {
+            return prev;
+          }
+          return [...prev, {
+            ...fileInfo,
+            share_code: pendingShareCode,
+            search_time: new Date().toISOString(),
+            password_verified: true,
+            verified_password: passwordInput
+          }];
+        });
+        
+        // 2秒后关闭模态框
+        setTimeout(() => {
+          setShowPasswordModal(false);
+          setPasswordInput('');
+          setShareCode('');
+        }, 1500);
+      }
+      
+    } catch (error) {
+      if (error.response?.status === 403) {
+        // 密码错误
+        const remaining = error.response?.data?.remaining;
+        setRemainingAttempts(remaining || 0);
+        message.error(error.response?.data?.error || '密码错误');
+      } else if (error.response?.status === 429) {
+        // 尝试次数过多，被锁定
+        setIsLocked(true);
+        setLockoutTime(error.response?.data?.lockout_time || 300);
+        setRemainingAttempts(0);
+        message.error(error.response?.data?.error || '尝试次数过多，请稍后再试');
+      } else {
+        message.error(error.response?.data?.error || '验证失败');
+      }
+    } finally {
+      setPasswordVerifying(false);
+    }
+  };
+
+  // 关闭密码模态框
+  const handleClosePasswordModal = () => {
+    setShowPasswordModal(false);
+    setPasswordInput('');
+    setPasswordVerified(false);
+    setPendingShareCode('');
   };
 
   const handleKeyPress = (e) => {
@@ -134,7 +231,9 @@ const FileSearch = () => {
     try {
       setDownloading(true);
       
-      const requestData = password ? { password } : {};
+      // 如果文件有已验证的密码，使用它
+      const usePassword = password || fileInfo.verified_password || null;
+      const requestData = usePassword ? { password: usePassword } : {};
       
       const response = await api.post(`/api/files/share/${fileInfo.share_code}/download/`, 
         requestData,
@@ -178,7 +277,14 @@ const FileSearch = () => {
       
     } catch (error) {
       if (error.response?.status === 403) {
-        message.error('密码错误或文件需要密码');
+        const remaining = error.response?.data?.remaining;
+        if (remaining !== undefined) {
+          message.error(`密码错误，还剩${remaining}次尝试机会`);
+        } else {
+          message.error('密码错误或文件需要密码');
+        }
+      } else if (error.response?.status === 429) {
+        message.error('尝试次数过多，请5分钟后再试');
       } else {
         message.error(error.response?.data?.error || '下载失败');
       }
@@ -196,7 +302,7 @@ const FileSearch = () => {
       const saveData = {
         share_code: selectedFile.share_code,
         folder_id: folderId,
-        password: passwordRequired ? passwordInput : undefined
+        password: selectedFile.verified_password || (passwordRequired ? passwordInput : undefined)
       };
 
       const response = await api.post('/api/files/save-shared-file/', saveData);
@@ -458,6 +564,109 @@ const FileSearch = () => {
     );
   };
 
+  // 密码验证模态框
+  const renderPasswordModal = () => {
+    return (
+      <Modal
+        title={
+          <Space>
+            <LockOutlined />
+            密码验证
+          </Space>
+        }
+        open={showPasswordModal}
+        onCancel={handleClosePasswordModal}
+        footer={null}
+        width={450}
+        centered
+      >
+        {isLocked ? (
+          // 被锁定状态
+          <Result
+            status="warning"
+            icon={<ExclamationCircleOutlined style={{ color: '#faad14' }} />}
+            title="尝试次数已用完"
+            subTitle={`请等待 ${Math.ceil(lockoutTime / 60)} 分钟后再试`}
+            extra={
+              <Button onClick={handleClosePasswordModal}>
+                知道了
+              </Button>
+            }
+          />
+        ) : passwordVerified ? (
+          // 验证成功状态
+          <Result
+            status="success"
+            icon={<CheckCircleOutlined style={{ color: '#52c41a' }} />}
+            title="密码正确"
+            subTitle="文件已添加到搜索结果，您现在可以下载文件了"
+          />
+        ) : (
+          // 输入密码状态
+          <div>
+            <Alert
+              message="该分享文件需要密码"
+              description={`请输入密码访问文件，还剩 ${remainingAttempts} 次尝试机会`}
+              type={remainingAttempts <= 1 ? 'error' : 'warning'}
+              showIcon
+              style={{ marginBottom: 20 }}
+            />
+            
+            <Input.Password
+              placeholder="请输入访问密码"
+              value={passwordInput}
+              onChange={(e) => setPasswordInput(e.target.value)}
+              onPressEnter={handleVerifyPassword}
+              prefix={<LockOutlined />}
+              size="large"
+              style={{ marginBottom: 16 }}
+            />
+            
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: 16 
+            }}>
+              <Text type="secondary">
+                剩余尝试次数：
+                <Text 
+                  strong 
+                  type={remainingAttempts <= 1 ? 'danger' : 'warning'}
+                >
+                  {remainingAttempts}
+                </Text>
+              </Text>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                5分钟内最多尝试3次
+              </Text>
+            </div>
+            
+            <Space style={{ width: '100%' }} direction="vertical">
+              <Button
+                type="primary"
+                size="large"
+                block
+                onClick={handleVerifyPassword}
+                loading={passwordVerifying}
+                disabled={!passwordInput.trim()}
+              >
+                验证密码
+              </Button>
+              <Button
+                size="large"
+                block
+                onClick={handleClosePasswordModal}
+              >
+                取消
+              </Button>
+            </Space>
+          </div>
+        )}
+      </Modal>
+    );
+  };
+
   return (
     <div style={{ padding: '24px' }}>
       <Card style={{ marginBottom: '24px' }}>
@@ -517,6 +726,7 @@ const FileSearch = () => {
 
       {renderPreviewModal()}
       {renderSaveModal()}
+      {renderPasswordModal()}
       
       <FolderSelector
         visible={showFolderSelector}

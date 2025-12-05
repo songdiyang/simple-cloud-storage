@@ -23,6 +23,7 @@ urlpatterns = [
     path('save-shared-file/', views.save_shared_file, name='save_shared_file'),
     # 公开分享访问
     path('share/<str:share_code>/', views.get_share_info, name='get_share_info'),
+    path('share/<str:share_code>/verify-password/', views.verify_share_password, name='verify_share_password'),
     path('share/<str:share_code>/download/', views.download_shared_file, name='download_shared_file'),
     path('share/<str:share_code>/temp_download/<str:filename>/', views.temp_download_shared_file, name='temp_download_shared_file'),
     path('share/<str:share_code>/temp/', views.download_shared_file_temp, name='download_shared_file_temp'),
