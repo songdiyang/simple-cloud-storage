@@ -23,7 +23,9 @@ import {
   SaveOutlined,
   CrownOutlined,
   GiftOutlined,
-  CheckCircleOutlined
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  ExclamationCircleOutlined
 } from '@ant-design/icons';
 import { useAuth } from '../contexts/AuthContext';
 import { useQuery } from 'react-query';
@@ -41,6 +43,8 @@ const Profile = () => {
   const [vipStep, setVipStep] = useState('info'); // 'info' | 'form' | 'success'
   const [orderNumber, setOrderNumber] = useState('');
   const [applyLoading, setApplyLoading] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false); // 显示拒绝原因弹窗
+  const [rejectDismissed, setRejectDismissed] = useState(false); // 用户已查看并关闭拒绝信息
 
   const { data: storageInfo } = useQuery('storage-info', () =>
     api.get('/api/files/storage/').then(res => res.data)
@@ -343,7 +347,19 @@ const Profile = () => {
                   ) : (
                     <Space>
                       <Tag color="default">普通用户</Tag>
-                      {!vipStatus?.has_pending_application ? (
+                      {/* VIP申请状态 */}
+                      {vipStatus?.has_pending_application ? (
+                        <Tag color="processing">审核中</Tag>
+                      ) : (vipStatus?.has_rejected_application && !rejectDismissed) ? (
+                        <Tag 
+                          color="error" 
+                          icon={<CloseCircleOutlined />}
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => setShowRejectModal(true)}
+                        >
+                          审核失败
+                        </Tag>
+                      ) : (
                         <Button 
                           type="link" 
                           size="small"
@@ -353,8 +369,6 @@ const Profile = () => {
                         >
                           升级VIP
                         </Button>
-                      ) : (
-                        <Tag color="processing">审核中</Tag>
                       )}
                     </Space>
                   )}
@@ -476,21 +490,43 @@ const Profile = () => {
                 <div>
                   <Text strong>升级 VIP 获取 5GB 存储空间</Text>
                 </div>
-                <Button 
-                  type="primary"
-                  icon={<CrownOutlined />}
-                  onClick={() => setShowVipModal(true)}
-                  style={{ 
-                    marginTop: 12,
-                    background: 'linear-gradient(135deg, #ffd700 0%, #ffb700 100%)',
-                    border: '2px solid #333',
-                    color: '#333',
-                    fontWeight: 'bold'
-                  }}
-                  disabled={vipStatus?.has_pending_application}
-                >
-                  {vipStatus?.has_pending_application ? '申请审核中' : '成为 VIP'}
-                </Button>
+                {vipStatus?.has_pending_application ? (
+                  <Tag color="processing" style={{ marginTop: 12 }}>申请审核中，请耐心等待</Tag>
+                ) : (vipStatus?.has_rejected_application && !rejectDismissed) ? (
+                  <Space direction="vertical" style={{ marginTop: 12 }}>
+                    <Tag color="error" icon={<CloseCircleOutlined />}>
+                      上次申请未通过
+                    </Tag>
+                    <Button 
+                      type="primary"
+                      icon={<CrownOutlined />}
+                      onClick={() => setShowVipModal(true)}
+                      style={{ 
+                        background: 'linear-gradient(135deg, #ffd700 0%, #ffb700 100%)',
+                        border: '2px solid #333',
+                        color: '#333',
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      重新申请
+                    </Button>
+                  </Space>
+                ) : (
+                  <Button 
+                    type="primary"
+                    icon={<CrownOutlined />}
+                    onClick={() => setShowVipModal(true)}
+                    style={{ 
+                      marginTop: 12,
+                      background: 'linear-gradient(135deg, #ffd700 0%, #ffb700 100%)',
+                      border: '2px solid #333',
+                      color: '#333',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    成为 VIP
+                  </Button>
+                )}
               </div>
             )}
           </Card>
@@ -513,6 +549,92 @@ const Profile = () => {
         className="cel-modal"
       >
         {renderVipModalContent()}
+      </Modal>
+      
+      {/* 审核失败原因弹窗 */}
+      <Modal
+        title={
+          <Space>
+            <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />
+            <span>VIP 申请审核未通过</span>
+          </Space>
+        }
+        open={showRejectModal}
+        onCancel={() => {
+          setShowRejectModal(false);
+          setRejectDismissed(true);
+        }}
+        footer={
+          <Space>
+            <Button onClick={() => {
+              setShowRejectModal(false);
+              setRejectDismissed(true);
+            }}>
+              关闭
+            </Button>
+            <Button 
+              type="primary" 
+              icon={<CrownOutlined />}
+              onClick={() => {
+                setShowRejectModal(false);
+                setRejectDismissed(true);
+                setShowVipModal(true);
+              }}
+              style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
+            >
+              重新申请
+            </Button>
+          </Space>
+        }
+        centered
+        className="cel-modal"
+      >
+        <div style={{ 
+          padding: '20px',
+          background: '#fff2f0',
+          borderRadius: 12,
+          border: '2px solid #ffccc7'
+        }}>
+          <div style={{ marginBottom: 16 }}>
+            <Text type="secondary">申请单号：</Text>
+            <Text strong style={{ marginLeft: 8 }}>
+              {vipStatus?.rejected_application?.order_number}
+            </Text>
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <Text type="secondary">申请时间：</Text>
+            <Text style={{ marginLeft: 8 }}>
+              {vipStatus?.rejected_application?.created_at 
+                ? new Date(vipStatus.rejected_application.created_at).toLocaleString()
+                : '-'
+              }
+            </Text>
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <Text type="secondary">审核时间：</Text>
+            <Text style={{ marginLeft: 8 }}>
+              {vipStatus?.rejected_application?.reviewed_at 
+                ? new Date(vipStatus.rejected_application.reviewed_at).toLocaleString()
+                : '-'
+              }
+            </Text>
+          </div>
+          <Divider style={{ margin: '12px 0' }} />
+          <div>
+            <Text type="secondary">拒绝原因：</Text>
+            <div style={{ 
+              marginTop: 8,
+              padding: 12,
+              background: '#fff',
+              borderRadius: 8,
+              border: '1px solid #ffccc7'
+            }}>
+              <Text type="danger" strong>
+                {vipStatus?.rejected_application?.reject_reason || '未说明原因'}
+              </Text>
+            </div>
+          </div>
+        </div>
       </Modal>
     </div>
   );

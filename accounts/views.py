@@ -233,10 +233,17 @@ def my_vip_applications(request):
 @permission_classes([IsAuthenticated])
 def vip_status(request):
     """获取VIP状态"""
+    # 待审核的申请
     pending_application = VIPApplication.objects.filter(
         user=request.user,
         status=VIPApplication.STATUS_PENDING
     ).first()
+    
+    # 最近一次被拒绝的申请
+    rejected_application = VIPApplication.objects.filter(
+        user=request.user,
+        status=VIPApplication.STATUS_REJECTED
+    ).order_by('-reviewed_at').first()
     
     return Response({
         'is_vip': request.user.is_vip,
@@ -244,7 +251,9 @@ def vip_status(request):
         'role_display': request.user.get_role_display(),
         'storage_quota': request.user.storage_quota,
         'has_pending_application': pending_application is not None,
-        'pending_application': VIPApplicationSerializer(pending_application).data if pending_application else None
+        'pending_application': VIPApplicationSerializer(pending_application).data if pending_application else None,
+        'has_rejected_application': rejected_application is not None,
+        'rejected_application': VIPApplicationSerializer(rejected_application).data if rejected_application else None
     })
 
 
@@ -465,6 +474,7 @@ def admin_review_vip(request, application_id):
     
     action = request.data.get('action')  # 'approve' or 'reject'
     admin_note = request.data.get('admin_note', '')
+    reject_reason = request.data.get('reject_reason', '')
     
     if action == 'approve':
         application.status = VIPApplication.STATUS_APPROVED
@@ -476,6 +486,7 @@ def admin_review_vip(request, application_id):
         message = 'VIP申请已通过，用户已升级'
     elif action == 'reject':
         application.status = VIPApplication.STATUS_REJECTED
+        application.reject_reason = reject_reason or '未说明原因'
         message = 'VIP申请已拒绝'
     else:
         return Response({'error': '无效的操作'}, status=status.HTTP_400_BAD_REQUEST)

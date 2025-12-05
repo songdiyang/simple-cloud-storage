@@ -40,8 +40,8 @@ const AdminVIP = () => {
   );
 
   const reviewMutation = useMutation(
-    ({ applicationId, action, admin_note }) => 
-      api.post(`/api/auth/admin/vip-applications/${applicationId}/review/`, { action, admin_note }),
+    ({ applicationId, action, admin_note, reject_reason }) => 
+      api.post(`/api/auth/admin/vip-applications/${applicationId}/review/`, { action, admin_note, reject_reason }),
     {
       onSuccess: (_, variables) => {
         message.success(variables.action === 'approve' ? 'VIP申请已通过' : 'VIP申请已拒绝');
@@ -57,7 +57,7 @@ const AdminVIP = () => {
   );
 
   const handleApprove = (applicationId) => {
-    reviewMutation.mutate({ applicationId, action: 'approve', admin_note: '' });
+    reviewMutation.mutate({ applicationId, action: 'approve', admin_note: '', reject_reason: '' });
   };
 
   const handleReject = (app) => {
@@ -70,7 +70,8 @@ const AdminVIP = () => {
     reviewMutation.mutate({ 
       applicationId: rejectingApp.id, 
       action: 'reject', 
-      admin_note: rejectNote 
+      admin_note: '',
+      reject_reason: rejectNote 
     });
   };
 
@@ -126,6 +127,13 @@ const AdminVIP = () => {
       dataIndex: 'reviewed_by',
       key: 'reviewed_by',
       render: (text) => text || '-'
+    },
+    {
+      title: '拒绝原因',
+      dataIndex: 'reject_reason',
+      key: 'reject_reason',
+      render: (text, record) => record.status === 'rejected' ? (text || '未说明') : '-',
+      ellipsis: true
     },
     {
       title: '备注',

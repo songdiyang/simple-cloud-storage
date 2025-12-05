@@ -73,6 +73,7 @@ class VIPApplication(models.Model):
     order_number = models.CharField(max_length=100, verbose_name='赞助单号')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING, verbose_name='审核状态')
     admin_note = models.TextField(blank=True, null=True, verbose_name='管理员备注')
+    reject_reason = models.TextField(blank=True, null=True, verbose_name='拒绝原因')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='申请时间')
     reviewed_at = models.DateTimeField(blank=True, null=True, verbose_name='审核时间')
     reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, 

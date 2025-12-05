@@ -78,8 +78,8 @@ class VIPApplicationSerializer(serializers.ModelSerializer):
     class Meta:
         model = VIPApplication
         fields = ['id', 'username', 'order_number', 'status', 'status_display', 
-                 'admin_note', 'created_at', 'reviewed_at']
-        read_only_fields = ['id', 'status', 'admin_note', 'created_at', 'reviewed_at']
+                 'admin_note', 'reject_reason', 'created_at', 'reviewed_at']
+        read_only_fields = ['id', 'status', 'admin_note', 'reject_reason', 'created_at', 'reviewed_at']
     
     def get_status_display(self, obj):
         return obj.get_status_display()
