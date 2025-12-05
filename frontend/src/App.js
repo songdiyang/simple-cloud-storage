@@ -14,6 +14,7 @@ import Shares from './pages/Shares';
 import ShareView from './pages/ShareView';
 import FileSearch from './pages/FileSearch';
 import Profile from './pages/Profile';
+import Trash from './pages/Trash';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 
@@ -142,6 +143,7 @@ function App() {
                 <Route path="/files" element={<Files />} />
                 <Route path="/files/:folderId" element={<Files />} />
                 <Route path="/shares" element={<Shares />} />
+                <Route path="/trash" element={<Trash />} />
                 <Route path="/search" element={<FileSearch />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/share/:shareCode" element={<ShareView />} />
@@ -166,6 +168,7 @@ function App() {
                 <Route path="/files" element={<Files />} />
                 <Route path="/files/:folderId" element={<Files />} />
                 <Route path="/shares" element={<Shares />} />
+                <Route path="/trash" element={<Trash />} />
                 <Route path="/search" element={<FileSearch />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/share/:shareCode" element={<ShareView />} />

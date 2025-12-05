@@ -15,6 +15,13 @@ urlpatterns = [
     path('<uuid:file_id>/download/', views.download_file, name='download_file'),
     path('<uuid:file_id>/download-url/', views.get_download_url, name='get_download_url'),
     
+    # 回收站相关
+    path('trash/', views.trash_list, name='trash_list'),
+    path('trash/stats/', views.trash_stats, name='trash_stats'),
+    path('trash/empty/', views.empty_trash, name='empty_trash'),
+    path('trash/<uuid:file_id>/restore/', views.restore_file, name='restore_file'),
+    path('trash/<uuid:file_id>/delete/', views.permanent_delete_file, name='permanent_delete_file'),
+    
     # 分享相关
     path('<uuid:file_id>/share/', views.create_share, name='create_share'),
     path('shares/', views.my_shares, name='my_shares'),

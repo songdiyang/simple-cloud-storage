@@ -58,6 +58,9 @@ class File(models.Model):
     local_path = models.CharField(max_length=500, null=True, blank=True, verbose_name='本地存储路径')
     is_public = models.BooleanField(default=False, verbose_name='是否公开')
     download_count = models.IntegerField(default=0, verbose_name='下载次数')
+    # 回收站相关字段
+    is_deleted = models.BooleanField(default=False, verbose_name='是否删除')
+    deleted_at = models.DateTimeField(null=True, blank=True, verbose_name='删除时间')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='上传时间')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='更新时间')
     

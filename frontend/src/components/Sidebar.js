@@ -6,7 +6,8 @@ import {
   FolderOutlined,
   ShareAltOutlined,
   SearchOutlined,
-  UserOutlined
+  UserOutlined,
+  DeleteOutlined
 } from '@ant-design/icons';
 
 const { Sider } = Layout;
@@ -31,6 +32,11 @@ const Sidebar = ({ mobileMode = false, onClose }) => {
       key: '/shares',
       icon: <ShareAltOutlined />,
       label: '我的分享',
+    },
+    {
+      key: '/trash',
+      icon: <DeleteOutlined />,
+      label: '回收站',
     },
     {
       key: '/search',
