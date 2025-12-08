@@ -7,6 +7,7 @@ urlpatterns = [
     path('login/', views.login, name='login'),
     path('logout/', views.logout, name='logout'),
     path('profile/', views.profile, name='profile'),
+    path('change-username/', views.change_username, name='change_username'),
     path('upload-avatar/', views.upload_avatar, name='upload_avatar'),
     path('delete-avatar/', views.delete_avatar, name='delete_avatar'),
     # VIP相关

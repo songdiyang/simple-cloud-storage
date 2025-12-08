@@ -133,6 +133,61 @@ def profile(request):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def change_username(request):
+    """修改用户名"""
+    new_username = request.data.get('username', '').strip()
+    
+    # 验证用户名不为空
+    if not new_username:
+        return Response({
+            'error': '用户名不能为空'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # 验证用户名长度
+    if len(new_username) < 3:
+        return Response({
+            'error': '用户名至少需要3个字符'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    if len(new_username) > 30:
+        return Response({
+            'error': '用户名不能超过30个字符'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # 验证用户名格式（只允许字母、数字、下划线）
+    import re
+    if not re.match(r'^[a-zA-Z0-9_\u4e00-\u9fa5]+$', new_username):
+        return Response({
+            'error': '用户名只能包含字母、数字、下划线或中文'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # 检查是否与当前用户名相同
+    if new_username == request.user.username:
+        return Response({
+            'error': '新用户名与当前用户名相同'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # 检查用户名是否已被占用
+    if User.objects.filter(username=new_username).exists():
+        return Response({
+            'error': '该用户名已被使用'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # 更新用户名
+    old_username = request.user.username
+    request.user.username = new_username
+    request.user.save()
+    
+    return Response({
+        'message': '用户名修改成功',
+        'old_username': old_username,
+        'new_username': new_username,
+        'user': UserSerializer(request.user).data
+    })
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 @parser_classes([MultiPartParser, FormParser])

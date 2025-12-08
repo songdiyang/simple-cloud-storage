@@ -25,7 +25,8 @@ import {
   GiftOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
-  ExclamationCircleOutlined
+  ExclamationCircleOutlined,
+  EditOutlined
 } from '@ant-design/icons';
 import { useAuth } from '../contexts/AuthContext';
 import { useQuery } from 'react-query';
@@ -45,6 +46,11 @@ const Profile = () => {
   const [applyLoading, setApplyLoading] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false); // 显示拒绝原因弹窗
   const [rejectDismissed, setRejectDismissed] = useState(false); // 用户已查看并关闭拒绝信息
+  
+  // 修改用户名相关状态
+  const [showUsernameModal, setShowUsernameModal] = useState(false);
+  const [newUsername, setNewUsername] = useState('');
+  const [usernameLoading, setUsernameLoading] = useState(false);
 
   const { data: storageInfo } = useQuery('storage-info', () =>
     api.get('/api/files/storage/').then(res => res.data)
@@ -104,6 +110,30 @@ const Profile = () => {
     return false; // 阻止默认上传行为
   };
   
+  // 修改用户名
+  const handleChangeUsername = async () => {
+    if (!newUsername.trim()) {
+      message.error('请输入新用户名');
+      return;
+    }
+    
+    try {
+      setUsernameLoading(true);
+      const response = await api.put('/api/auth/change-username/', { 
+        username: newUsername.trim() 
+      });
+      message.success('用户名修改成功');
+      setShowUsernameModal(false);
+      setNewUsername('');
+      // 刷新页面以更新用户信息
+      window.location.reload();
+    } catch (error) {
+      message.error(error.response?.data?.error || '修改失败');
+    } finally {
+      setUsernameLoading(false);
+    }
+  };
+
   // VIP 申请提交
   const handleVipApply = async () => {
     if (!orderNumber.trim()) {
@@ -332,7 +362,21 @@ const Profile = () => {
             <Space direction="vertical" style={{ width: '100%' }}>
               <div>
                 <Text type="secondary">用户名</Text>
-                <div style={{ fontWeight: 'bold' }}>{user?.username}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontWeight: 'bold' }}>{user?.username}</span>
+                  <Button 
+                    type="link" 
+                    size="small" 
+                    icon={<EditOutlined />}
+                    onClick={() => {
+                      setNewUsername(user?.username || '');
+                      setShowUsernameModal(true);
+                    }}
+                    style={{ padding: 0, height: 'auto' }}
+                  >
+                    修改
+                  </Button>
+                </div>
               </div>
               <div>
                 <Text type="secondary">用户等级</Text>
@@ -631,6 +675,70 @@ const Profile = () => {
             }}>
               <Text type="danger" strong>
                 {vipStatus?.rejected_application?.reject_reason || '未说明原因'}
+              </Text>
+            </div>
+          </div>
+        </div>
+      </Modal>
+      
+      {/* 修改用户名弹窗 */}
+      <Modal
+        title={
+          <Space>
+            <EditOutlined style={{ color: '#667eea' }} />
+            <span>修改用户名</span>
+          </Space>
+        }
+        open={showUsernameModal}
+        onCancel={() => {
+          setShowUsernameModal(false);
+          setNewUsername('');
+        }}
+        footer={
+          <Space>
+            <Button onClick={() => {
+              setShowUsernameModal(false);
+              setNewUsername('');
+            }}>
+              取消
+            </Button>
+            <Button 
+              type="primary" 
+              loading={usernameLoading}
+              onClick={handleChangeUsername}
+              className="cel-button"
+            >
+              确认修改
+            </Button>
+          </Space>
+        }
+        centered
+        className="cel-modal"
+      >
+        <div style={{ padding: '20px 0' }}>
+          <div style={{ marginBottom: 16 }}>
+            <Text type="secondary">当前用户名：</Text>
+            <Text strong style={{ marginLeft: 8 }}>{user?.username}</Text>
+          </div>
+          <div>
+            <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>
+              新用户名：
+            </Text>
+            <Input
+              placeholder="请输入新用户名"
+              value={newUsername}
+              onChange={(e) => setNewUsername(e.target.value)}
+              maxLength={30}
+              showCount
+              style={{ 
+                borderRadius: 8,
+                border: '2px solid #667eea'
+              }}
+              size="large"
+            />
+            <div style={{ marginTop: 8 }}>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                用户名只能包含字母、数字、下划线或中文，长度 3-30 个字符
               </Text>
             </div>
           </div>
