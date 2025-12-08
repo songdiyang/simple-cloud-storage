@@ -133,13 +133,19 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.SessionAuthentication',
-        'rest_framework.authentication.TokenAuthentication',
+        'accounts.authentication.ExpiringTokenAuthentication',  # 使用自定义的过期令牌认证
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
+}
+
+# 令牌过期配置
+TOKEN_EXPIRE_CONFIG = {
+    'ADMIN_TOKEN_EXPIRE_SECONDS': 2 * 60 * 60,      # 管理员令牌有效期：2小时
+    'USER_TOKEN_EXPIRE_SECONDS': 7 * 24 * 60 * 60,  # 普通用户令牌有效期：7天
 }
 
 # CORS settings

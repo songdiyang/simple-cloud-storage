@@ -11,6 +11,7 @@ from django.db.models.functions import TruncDate
 from datetime import timedelta
 from .models import User, VIPApplication, LoginRecord, OnlineUser
 from .serializers import UserSerializer, RegisterSerializer, VIPApplicationSerializer, VIPApplicationCreateSerializer
+from .authentication import refresh_token, ExpiringTokenAuthentication
 
 
 # 管理员权限类
@@ -48,10 +49,14 @@ def register(request):
     serializer = RegisterSerializer(data=request.data)
     if serializer.is_valid():
         user = serializer.save()
-        token, created = Token.objects.get_or_create(user=user)
+        # 使用刷新令牌函数创建新令牌
+        token = refresh_token(user)
+        # 获取令牌过期信息
+        token_info = ExpiringTokenAuthentication.get_token_expire_info(user)
         return Response({
             'user': UserSerializer(user).data,
-            'token': token.key
+            'token': token.key,
+            'token_expire': token_info
         }, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -66,7 +71,11 @@ def login(request):
     if username and password:
         user = authenticate(username=username, password=password)
         if user:
-            token, created = Token.objects.get_or_create(user=user)
+            # 每次登录刷新令牌（删除旧令牌，创建新令牌）
+            token = refresh_token(user)
+            
+            # 获取令牌过期信息
+            token_info = ExpiringTokenAuthentication.get_token_expire_info(user)
             
             # 记录登录信息
             LoginRecord.objects.create(
@@ -83,7 +92,8 @@ def login(request):
             
             return Response({
                 'user': UserSerializer(user).data,
-                'token': token.key
+                'token': token.key,
+                'token_expire': token_info  # 返回令牌过期信息
             })
         else:
             return Response({
