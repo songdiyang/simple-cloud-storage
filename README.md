@@ -221,6 +221,23 @@ cloud-storage-system/
 
 ---
 
+## 赞助 / Sponsor
+
+如果您觉得这个项目对您有帮助，欢迎赞助支持！
+
+<div align="center">
+
+### WeChat Pay / 微信支付
+
+<img src="./assets/wechat-pay-qrcode.png" alt="WeChat Pay QR Code" width="200" />
+
+### Alipay / 支付宝
+
+<img src="./assets/alipay-qrcode.png" alt="Alipay QR Code" width="200" />
+
+</div>
+
+---
 
 <a id="en-guide"></a>
 
@@ -417,3 +434,23 @@ If both commands succeed, your Swift authentication is correctly configured.
 ### 7. License
 
 This project is released under the **MIT License**.
+
+---
+
+## Sponsor / 赞助
+
+If you find this project helpful, you're welcome to support us!
+
+<div align="center">
+
+### WeChat Pay / 微信支付
+
+<img src="./assets/wechat-pay-qrcode.png" alt="WeChat Pay QR Code" width="200" />
+
+### Alipay / 支付宝
+
+<img src="./assets/alipay-qrcode.png" alt="Alipay QR Code" width="200" />
+
+</div>
+
+---
