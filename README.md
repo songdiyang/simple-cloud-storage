@@ -470,3 +470,15 @@ If you find this project helpful, you're welcome to support us!
 </div>
 
 ---
+
+## Contributors / 贡献者
+
+感谢以下贡献者为项目做出的努力：
+
+<div align="center">
+
+<!-- 用法: ![贡献者头像](头像URL "贡献者姓名") -->
+
+[<img src="https://gitee.com/song-diyang/avatar" width="100" style="border-radius: 50%; margin: 10px;" title="song-diyang">](https://gitee.com/song-diyang)
+
+</div>
