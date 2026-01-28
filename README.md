@@ -1,175 +1,157 @@
-# 云盘系统
+## 云盘系统
 
-基于 Django + React + MySQL + OpenStack Swift 的现代化云存储系统，采用赛璐璐风格设计。
+基于 **Django + React + MySQL + OpenStack Swift** 的个人/团队云存储系统，前后端分离，UI 采用明快的赛璐璐风格。
 
-## 功能特性
+### 功能特性
 
-- 📁 文件和文件夹管理
-- ☁️ OpenStack Swift 对象存储
-- 🔐 用户认证和授权
-- 📤 文件上传和下载
-- 🔗 文件分享功能
-- 📊 存储空间管理
-- 🎨 赛璐璐风格UI设计
-- 📱 响应式设计
+- **文件管理**：文件/文件夹的创建、重命名、删除、移动
+- **多存储支持**：OpenStack Swift 对象存储 + 本地存储备份
+- **用户体系**：注册 / 登录 / 资料修改 / 头像上传
+- **权限与角色**：普通用户 / 管理员，支持 VIP 申请与审核
+- **分享功能**：生成分享链接、设置密码与有效期、外链访问
+- **回收站**：删除文件进入回收站，可恢复或彻底删除
+- **存储统计**：已用空间、配额、全局统计（管理后台）
+- **管理后台**：用户管理、VIP 审核、登录记录、在线用户等
 
-## 技术栈
+### 技术栈
 
-### 后端
-- Django 4.2.7
-- Django REST Framework
-- MySQL
-- OpenStack Swift
-- Celery (异步任务)
-- Redis (消息队列)
+- **后端**
+  - Django 4.2.7, Django REST Framework
+  - MySQL
+  - OpenStack Swift
+  - Celery + Redis（异步任务与消息队列）
 
-### 前端
-- React 18
-- Ant Design
-- React Router
-- React Query
-- Styled Components
+- **前端**
+  - React 18
+  - Ant Design
+  - React Router v6
+  - React Query
 
-## 环境配置
+---
 
-### OpenStack Swift 配置
+### 快速开始
 
-```bash
-export OS_REGION_NAME=RegionOne
-export OS_PROJECT_DOMAIN_ID=default
-export OS_CACERT=
-export OS_AUTH_URL=http://192.168.219.143/identity
-export OS_USER_DOMAIN_ID=default
-export OS_USERNAME=admin
-export OS_AUTH_TYPE=password
-export OS_PROJECT_NAME=admin
-export OS_PASSWORD=devstack123
-```
-
-### 数据库配置
-
-- 数据库类型: MySQL
-- 端口: 3306
-- 密码: 3306
-
-## 安装和运行
-
-### 1. 克隆项目
+#### 1. 克隆项目
 
 ```bash
-git clone <repository-url>
+git clone https://gitee.com/song-diyang/cloud-storage-system.git
 cd cloud-storage-system
 ```
 
-### 2. 后端设置
+#### 2. 后端环境
 
 ```bash
-# 创建虚拟环境
+# 创建并激活虚拟环境
 python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# 或
 venv\Scripts\activate  # Windows
+# 或
+source venv/bin/activate  # Linux / Mac
 
 # 安装依赖
 pip install -r requirements.txt
 
-# 配置环境变量
-cp .env.example .env
-# 编辑 .env 文件，填入正确的配置
-
-# 数据库迁移
-python manage.py makemigrations
+# 迁移数据库
 python manage.py migrate
 
-# 创建超级用户
+# 创建超级管理员
 python manage.py createsuperuser
 
-# 启动后端服务
-python manage.py runserver
+# 启动后端
+python manage.py runserver 0.0.0.0:8000
 ```
 
-### 3. 前端设置
+> 数据库默认使用 MySQL，连接信息在 `cloud_storage/settings.py` 中通过环境变量配置。
+
+#### 3. 前端环境
 
 ```bash
 cd frontend
-
-# 安装依赖
 npm install
-
-# 启动前端服务
 npm start
 ```
 
-### 4. 访问应用
+前端默认运行在 `http://localhost:3000`，通过 `package.json` 中的 `proxy` 代理到后端 `http://localhost:8000`。
 
-- 前端地址: http://localhost:3000
-- 后端API: http://localhost:8000
-- 管理后台: http://localhost:8000/admin
+#### 4. 访问入口
 
-## 项目结构
+- 用户登录页：`http://localhost:3000/login`
+- 用户文件管理页：`http://localhost:3000/dashboard`
+- 分享访问页：`http://localhost:3000/share/:shareCode`
+- Django 管理后台：`http://localhost:8000/admin`
 
-```
+---
+
+### 项目结构（精简版）
+
+```text
 cloud-storage-system/
-├── cloud_storage/          # Django项目配置
-│   ├── settings.py        # 项目设置
-│   ├── urls.py           # 主URL配置
-│   └── wsgi.py           # WSGI配置
-├── accounts/              # 用户认证应用
-│   ├── models.py         # 用户模型
-│   ├── views.py          # 认证视图
-│   └── serializers.py    # 序列化器
-├── files/                 # 文件管理应用
-│   ├── models.py         # 文件和文件夹模型
-│   ├── views.py          # 文件操作视图
-│   ├── utils.py          # Swift工具函数
-│   └── serializers.py    # 序列化器
-├── frontend/              # React前端
-│   ├── src/
-│   │   ├── components/   # 通用组件
-│   │   ├── pages/        # 页面组件
-│   │   ├── contexts/     # React Context
-│   │   └── services/     # API服务
-│   └── package.json
-├── requirements.txt       # Python依赖
-├── .env                  # 环境变量
-└── manage.py             # Django管理脚本
+├─ cloud_storage/        # Django 项目配置
+│  ├─ settings.py        # 配置（数据库、Swift、Redis 等）
+│  ├─ urls.py            # 主路由
+│  └─ wsgi.py / asgi.py
+├─ accounts/             # 用户与权限
+│  ├─ models.py          # 用户、VIP 申请、登录记录、在线用户
+│  ├─ views.py           # 注册、登录、资料、VIP 接口等
+│  ├─ serializers.py
+│  └─ authentication.py  # 自定义 Token 过期逻辑
+├─ files/                # 文件与存储
+│  ├─ models.py          # 文件、文件夹等模型
+│  ├─ views/             # 文件、分享、回收站、下载等接口
+│  ├─ services/          # Swift 与本地存储服务
+│  └─ utils.py           # Swift 相关工具函数
+├─ frontend/             # React 前端源码
+│  ├─ src/
+│  │  ├─ pages/          # 登录、文件、分享、回收站、管理后台等页面
+│  │  ├─ components/     # Header / Sidebar / 弹窗等组件
+│  │  ├─ contexts/       # AuthContext 等
+│  │  └─ services/       # API 封装
+│  └─ package.json
+├─ requirements.txt      # 后端依赖
+└─ manage.py             # Django 管理脚本
 ```
 
-## API接口
+---
 
-### 认证相关
-- `POST /api/auth/register/` - 用户注册
-- `POST /api/auth/login/` - 用户登录
-- `POST /api/auth/logout/` - 用户登出
-- `GET/PUT /api/auth/profile/` - 用户资料
+### 核心 API（部分）
 
-### 文件管理
-- `GET /api/files/` - 文件列表
-- `POST /api/files/upload/` - 文件上传
-- `DELETE /api/files/{id}/delete/` - 删除文件
-- `GET /api/files/folders/` - 文件夹列表
-- `POST /api/files/folders/create/` - 创建文件夹
+- **认证**
+  - `POST /api/auth/register/`：用户注册
+  - `POST /api/auth/login/`：登录并获取 Token
+  - `POST /api/auth/logout/`：登出
+  - `GET/PUT /api/auth/profile/`：获取 / 修改用户资料
 
-### 分享功能
-- `POST /api/files/{id}/share/` - 创建分享
-- `GET /api/files/shares/` - 我的分享
-- `DELETE /api/files/shares/{id}/delete/` - 删除分享
+- **文件**
+  - `GET /api/files/`：文件列表
+  - `POST /api/files/upload/`：上传文件
+  - `DELETE /api/files/{id}/`：删除文件（进入回收站）
 
-## 部署说明
+- **文件夹**
+  - `GET /api/folders/`：文件夹列表
+  - `POST /api/folders/`：创建文件夹
+  - `DELETE /api/folders/{id}/`：删除文件夹
 
-1. 确保OpenStack Swift服务正常运行
-2. 配置正确的数据库连接
-3. 设置Redis服务用于Celery
-4. 配置Nginx反向代理（生产环境）
-5. 使用Gunicorn或uWSGI部署Django应用
+- **分享**
+  - `POST /api/shares/`：创建分享
+  - `GET /api/shares/`：我的分享
+  - `DELETE /api/shares/{id}/`：删除分享
 
-## 开发说明
+- **回收站 & 统计**
+  - `GET /api/trash/`：回收站列表
+  - `POST /api/trash/{id}/restore/`：恢复文件
+  - `DELETE /api/trash/{id}/`：彻底删除
+  - `GET /api/storage/stats/`：存储统计
 
-- 后端使用Django REST Framework提供API
-- 前端使用React和Ant Design构建用户界面
-- 采用赛璐璐风格设计，色彩鲜艳、圆润可爱
-- 支持响应式设计，适配移动端
+---
 
-## 许可证
+### 部署建议（简要）
 
-MIT License
+- 数据库：准备好 MySQL 实例，并配置好账号与库名
+- 对象存储：确保 OpenStack Swift 可用，并按实际环境设置相关环境变量
+- 消息队列：启动 Redis，供 Celery 使用
+- 生产环境：建议使用 Nginx + Gunicorn / uWSGI 部署 Django，并将前端打包后由 Nginx 提供静态资源
+
+---
+
+### 许可证
+
+本项目采用 **MIT License**。
