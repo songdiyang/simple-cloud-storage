@@ -479,6 +479,6 @@ If you find this project helpful, you're welcome to support us!
 
 <!-- 用法: ![贡献者头像](头像URL "贡献者姓名") -->
 
-[<img src="https://gitee.com/avatars/songdiyang/" width="100" style="border-radius: 50%; margin: 10px;" title="songdiyang">](https://gitee.com/songdiyang)
+[<img src="https://foruda.gitee.com/avatar/1765030028102188735/15302629_song-diyang_1765030028.png!avatar200" width="100" style="border-radius: 50%; margin: 10px;" title="songdiyang">](https://gitee.com/songdiyang)
 
 </div>
