@@ -34,7 +34,15 @@
 - **统计与管理**：存储空间统计、VIP 申请与审核、登录记录、在线用户
 - **前端体验**：React + Ant Design，支持基础响应式布局
 
-### 4. 技术栈
+### 4. 界面预览
+
+<div align="center">
+
+![系统预览](./assets/preview.png "云盘系统界面预览")
+
+</div>
+
+### 5. 技术栈
 
 - **后端**
   - Django 4.2.7
@@ -269,7 +277,15 @@ It supports file management, sharing, recycle bin, and an admin dashboard.
 - **Statistics & Admin**: storage usage, VIP applications, login records, online users
 - **Frontend**: React + Ant Design, basic responsive layout
 
-### 4. Tech Stack
+### 4. Interface Preview
+
+<div align="center">
+
+![System Preview](./assets/preview.png "Cloud Storage System Interface Preview")
+
+</div>
+
+### 5. Tech Stack
 
 - **Backend**
   - Django 4.2.7, Django REST Framework
