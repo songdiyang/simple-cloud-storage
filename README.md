@@ -11,7 +11,7 @@
 
 ### 1. 项目简介
 
-**云盘系统（Cloud Storage System）** 是一个基于 **Django + React + MySQL + OpenStack Swift** 的个人 / 团队云存储项目，支持文件管理、分享、回收站、管理员后台等功能。
+**简单云盘（Simple Cloud Storage）** 是一个基于 **Django + React + MySQL + OpenStack Swift** 的个人 / 团队云存储项目，支持文件管理、分享、回收站、管理员后台等功能。
 
 ### 2. 项目定位（中文）
 
@@ -38,7 +38,7 @@
 
 <div align="center">
 
-![系统预览](./assets/preview.png "云盘系统界面预览")
+![系统预览](./assets/preview.png "简单云盘界面预览")
 
 </div>
 
@@ -211,7 +211,7 @@ swift list
 
 ### 7. 目录结构（简要概览）
 
-```text
+```
 cloud-storage-system/
 ├─ cloud_storage/        # Django 项目配置
 ├─ accounts/             # 用户 / 角色 / VIP / 登录记录等
@@ -253,7 +253,7 @@ cloud-storage-system/
 
 ### 1. Overview
 
-**Cloud Storage System** is a personal / team cloud drive project built with **Django + React + MySQL + OpenStack Swift**.  
+**Simple Cloud Storage** is a personal / team cloud drive project built with **Django + React + MySQL + OpenStack Swift**.  
 It supports file management, sharing, recycle bin, and an admin dashboard.
 
 ### 2. Positioning & Use Cases
