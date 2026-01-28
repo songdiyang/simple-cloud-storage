@@ -160,6 +160,13 @@ lerna-debug.log*
 
 # Frontend build output
 frontend/build/
+frontend/dist/
+frontend/out/
+
+# Environment specific files
+frontend/.env.local
+frontend/.env.development
+frontend/.env.production
 
 # Runtime data
 pids
