@@ -70,19 +70,19 @@ const Sidebar = ({ mobileMode = false, onClose }) => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.2)'
+        borderBottom: '1px solid #000000' /* 黑色边框 */
       }}>
         <div style={{
           width: '50px',
           height: '50px',
-          background: 'linear-gradient(145deg, #667eea, #764ba2)',
-          borderRadius: '15px',
+          background: '#000000', /* 纯黑色 */
+          borderRadius: '0', /* 无圆角 - 方形 */
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: 'white',
+          color: '#ffffff', /* 白色文字 */
           fontSize: '24px',
-          fontWeight: 'bold'
+          fontWeight: 'normal' /* 减小字重 */
         }}>
           ☁
         </div>
@@ -95,9 +95,13 @@ const Sidebar = ({ mobileMode = false, onClose }) => {
         onClick={handleMenuClick}
         style={{
           border: 'none',
-          background: 'transparent',
-          fontSize: '16px'
+          background: '#ffffff', /* 白色背景 */
+          fontSize: '16px',
+          color: '#000000' /* 黑色文字 */
         }}
+        itemIcon={
+          <span style={{ color: '#000000' }} /> /* 确保图标为黑色 */
+        }
       />
     </>
   );
@@ -110,9 +114,8 @@ const Sidebar = ({ mobileMode = false, onClose }) => {
     <Sider
       width={240}
       style={{
-        background: 'rgba(255, 255, 255, 0.95)',
-        backdropFilter: 'blur(10px)',
-        borderRight: '1px solid rgba(255, 255, 255, 0.2)',
+        background: '#ffffff', /* 纯白色 */
+        borderRight: '1px solid #000000', /* 黑色边框 */
       }}
     >
       {sidebarContent}

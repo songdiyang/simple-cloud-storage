@@ -71,7 +71,7 @@ const Login = () => {
       justifyContent: 'center',
       alignItems: 'center',
       padding: '16px',
-      background: '#f0f2f5',
+      background: '#ffffff', /* 纯白背景 */
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
     }}>
       {/* API状态提示 */}
@@ -96,7 +96,10 @@ const Login = () => {
                 重试
               </Button>
             }
-            style={{ borderRadius: '8px' }}
+            style={{ 
+              borderRadius: '0', /* 无圆角 */
+              border: '1px solid #000000' /* 黑色边框 */
+            }}
           />
         </div>
       )}
@@ -106,43 +109,45 @@ const Login = () => {
           width: '100%',
           maxWidth: '400px',
           padding: '24px',
-          border: '1px solid #d9d9d9',
-          borderRadius: '12px',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)'
+          border: '1px solid #000000', /* 黑色边框 */
+          borderRadius: '0', /* 无圆角 */
+          boxShadow: 'none' /* 去除阴影 */
         }}
-        bodyStyle={{ padding: 0 }}
+        bodyStyle={{ 
+          padding: 0,
+          background: '#ffffff' /* 白色背景 */
+        }}
       >
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <div style={{
             width: '64px',
             height: '64px',
-            background: '#1890ff',
-            borderRadius: '50%',
+            background: '#000000', /* 纯黑色 */
+            borderRadius: '0', /* 无圆角 - 方形 */
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: 'white',
+            color: '#ffffff', /* 白色文字 */
             fontSize: '28px',
             margin: '0 auto 20px'
           }}>
             <CloudOutlined />
           </div>
           <Title level={3} style={{ 
-            color: '#262626', 
+            color: '#000000', /* 纯黑色 */
             margin: '0 0 8px 0',
             fontSize: '24px',
-            fontWeight: 600
+            fontWeight: 400 /* 减小字重 */
           }}>
             登录
           </Title>
           <Text style={{ 
-            color: '#8c8c8c',
+            color: '#000000', /* 纯黑色 */
             fontSize: '14px'
           }}>
             欢迎使用云存储系统
           </Text>
         </div>
-
 
 
           <Form
@@ -158,12 +163,14 @@ const Login = () => {
               style={{ marginBottom: '16px' }}
             >
               <Input
-                prefix={<UserOutlined style={{ color: '#8c8c8c' }} />}
+                prefix={<UserOutlined style={{ color: '#000000' }} />} /* 黑色图标 */
                 placeholder="用户名"
                 style={{
                   height: '40px',
-                  border: '1px solid #d9d9d9',
-                  borderRadius: '6px'
+                  border: '1px solid #000000', /* 黑色边框 */
+                  borderRadius: '0', /* 无圆角 */
+                  background: '#ffffff', /* 白色背景 */
+                  color: '#000000' /* 黑色文字 */
                 }}
               />
             </Form.Item>
@@ -174,12 +181,14 @@ const Login = () => {
               style={{ marginBottom: '24px' }}
             >
               <Input.Password
-                prefix={<LockOutlined style={{ color: '#8c8c8c' }} />}
+                prefix={<LockOutlined style={{ color: '#000000' }} />} /* 黑色图标 */
                 placeholder="密码"
                 style={{
                   height: '40px',
-                  border: '1px solid #d9d9d9',
-                  borderRadius: '6px'
+                  border: '1px solid #000000', /* 黑色边框 */
+                  borderRadius: '0', /* 无圆角 */
+                  background: '#ffffff', /* 白色背景 */
+                  color: '#000000' /* 黑色文字 */
                 }}
               />
             </Form.Item>
@@ -194,10 +203,11 @@ const Login = () => {
                 style={{
                   height: '40px',
                   fontSize: '16px',
-                  fontWeight: 500,
-                  backgroundColor: '#1890ff',
-                  borderColor: '#1890ff',
-                  borderRadius: '6px'
+                  fontWeight: 400, /* 减小字重 */
+                  backgroundColor: '#000000', /* 纯黑色 */
+                  borderColor: '#000000', /* 黑色边框 */
+                  borderRadius: '0', /* 无圆角 */
+                  color: '#ffffff' /* 白色文字 */
                 }}
               >
                 {loading ? '登录中...' : '登录'}
@@ -207,18 +217,18 @@ const Login = () => {
 
           <div style={{ 
             textAlign: 'center',
-            borderTop: '1px solid #f0f0f0',
+            borderTop: '1px solid #000000', /* 黑色边框 */
             paddingTop: '16px',
             marginTop: '16px'
           }}>
-            <Text style={{ color: '#8c8c8c', fontSize: '14px' }}>
+            <Text style={{ color: '#000000', fontSize: '14px' }}>
               还没有账号？{' '}
               <Link 
                 to="/register" 
                 style={{ 
-                  color: '#1890ff',
+                  color: '#000000', /* 黑色链接 */
                   textDecoration: 'none',
-                  fontWeight: 500
+                  fontWeight: 400 /* 减小字重 */
                 }}
               >
                 立即注册
