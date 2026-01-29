@@ -1,8 +1,9 @@
 #!/bin/bash
 
 # ============================================
-# 简单云盘 - 自动部署脚本
-# Simple Cloud Storage - Auto Deploy Script
+# 简单云盘 - 一键部署脚本
+# Simple Cloud Storage - One-Click Deploy
+# 支持: Ubuntu/Debian/CentOS/RHEL/Fedora/Arch
 # ============================================
 
 set -e
@@ -12,9 +13,17 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+CYAN='\033[0;36m'
+NC='\033[0m'
 
-# 艺术字 "云"
+# 全局变量
+DEPLOY_DIR=""
+OS_TYPE=""
+PKG_MANAGER=""
+PKG_INSTALL=""
+SERVICE_MANAGER=""
+
+# 艺术字
 print_cloud_art() {
     echo -e "${GREEN}"
     echo "    ██████╗██╗      ██████╗ ██╗   ██╗██████╗ "
@@ -28,324 +37,443 @@ print_cloud_art() {
     echo -e "${NC}"
 }
 
-# 打印信息
-info() {
-    echo -e "${BLUE}[INFO]${NC} $1"
+print_banner() {
+    echo -e "${CYAN}"
+    echo "╔════════════════════════════════════════════╗"
+    echo "║     简单云盘 - 一键部署脚本                ║"
+    echo "║     Simple Cloud Storage - One-Click       ║"
+    echo "╚════════════════════════════════════════════╝"
+    echo -e "${NC}"
 }
 
-success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
-}
-
-warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
-
+# 日志函数
+info() { echo -e "${BLUE}[INFO]${NC} $1"; }
+success() { echo -e "${GREEN}[OK]${NC} $1"; }
+warning() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 error() {
     echo -e "${RED}[ERROR]${NC} $1"
     echo -e "${RED}[错误]${NC} $2"
 }
+step() { echo -e "${CYAN}[STEP]${NC} $1"; }
 
-# 询问是否跳过
-ask_skip() {
-    read -p "$1 [y/n/skip]: " choice
-    case "$choice" in
-        y|Y ) return 0 ;;
-        n|N ) return 1 ;;
-        skip|SKIP|s|S ) return 2 ;;
-        * ) return 1 ;;
-    esac
-}
-
-# 获取密码输入
+# 密码输入
 get_password() {
-    local prompt="$1"
     local password
-    read -sp "$prompt: " password
+    read -sp "$1: " password
     echo ""
     echo "$password"
 }
 
 # ============================================
-# 1. 检测系统环境
+# 检测 Linux 发行版
 # ============================================
-check_system() {
-    info "检测系统环境 / Checking system environment..."
+detect_os() {
+    step "检测操作系统 / Detecting OS..."
     
     if [ -f /etc/os-release ]; then
         . /etc/os-release
-        OS=$NAME
-        info "检测到系统 / Detected OS: $OS"
+        OS_NAME=$ID
+        OS_VERSION=$VERSION_ID
+    elif [ -f /etc/redhat-release ]; then
+        OS_NAME="rhel"
+    elif [ -f /etc/debian_version ]; then
+        OS_NAME="debian"
     else
-        error "Cannot detect OS" "无法检测操作系统"
+        error "Unsupported OS" "不支持的操作系统"
         exit 1
     fi
+    
+    case "$OS_NAME" in
+        ubuntu|debian|linuxmint|pop)
+            OS_TYPE="debian"
+            PKG_MANAGER="apt"
+            PKG_INSTALL="apt install -y"
+            PKG_UPDATE="apt update"
+            ;;
+        centos|rhel|rocky|almalinux|ol)
+            OS_TYPE="rhel"
+            PKG_MANAGER="yum"
+            PKG_INSTALL="yum install -y"
+            PKG_UPDATE="yum makecache"
+            if command -v dnf &> /dev/null; then
+                PKG_MANAGER="dnf"
+                PKG_INSTALL="dnf install -y"
+                PKG_UPDATE="dnf makecache"
+            fi
+            ;;
+        fedora)
+            OS_TYPE="fedora"
+            PKG_MANAGER="dnf"
+            PKG_INSTALL="dnf install -y"
+            PKG_UPDATE="dnf makecache"
+            ;;
+        arch|manjaro|endeavouros)
+            OS_TYPE="arch"
+            PKG_MANAGER="pacman"
+            PKG_INSTALL="pacman -S --noconfirm"
+            PKG_UPDATE="pacman -Sy"
+            ;;
+        opensuse*|sles)
+            OS_TYPE="suse"
+            PKG_MANAGER="zypper"
+            PKG_INSTALL="zypper install -y"
+            PKG_UPDATE="zypper refresh"
+            ;;
+        alpine)
+            OS_TYPE="alpine"
+            PKG_MANAGER="apk"
+            PKG_INSTALL="apk add"
+            PKG_UPDATE="apk update"
+            ;;
+        *)
+            error "Unsupported distribution: $OS_NAME" "不支持的发行版: $OS_NAME"
+            exit 1
+            ;;
+    esac
+    
+    # 检测服务管理器
+    if command -v systemctl &> /dev/null; then
+        SERVICE_MANAGER="systemd"
+    elif command -v service &> /dev/null; then
+        SERVICE_MANAGER="sysvinit"
+    elif command -v rc-service &> /dev/null; then
+        SERVICE_MANAGER="openrc"
+    fi
+    
+    success "系统: $OS_NAME ($OS_TYPE) | 包管理: $PKG_MANAGER | 服务: $SERVICE_MANAGER"
 }
 
 # ============================================
-# 2. 安装基础依赖
+# 安装依赖
 # ============================================
-install_dependencies() {
-    info "安装基础依赖 / Installing dependencies..."
+install_packages() {
+    step "安装依赖包 / Installing packages..."
     
-    if command -v apt &> /dev/null; then
-        sudo apt update
-        sudo apt install -y python3 python3-pip python3-venv nginx mysql-server nodejs npm git
-    elif command -v yum &> /dev/null; then
-        sudo yum install -y python3 python3-pip nginx mysql-server nodejs npm git
-    else
-        error "Package manager not found" "找不到包管理器"
-        exit 1
-    fi
+    sudo $PKG_UPDATE
+    
+    case "$OS_TYPE" in
+        debian)
+            sudo $PKG_INSTALL python3 python3-pip python3-venv nginx git curl
+            # MySQL
+            sudo $PKG_INSTALL mysql-server mysql-client libmysqlclient-dev || \
+            sudo $PKG_INSTALL mariadb-server mariadb-client libmariadb-dev
+            # Node.js
+            if ! command -v node &> /dev/null; then
+                curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+                sudo $PKG_INSTALL nodejs
+            fi
+            ;;
+        rhel|fedora)
+            sudo $PKG_INSTALL python3 python3-pip nginx git curl
+            # MySQL
+            sudo $PKG_INSTALL mysql-server mysql-devel || \
+            sudo $PKG_INSTALL mariadb-server mariadb-devel
+            # Node.js
+            if ! command -v node &> /dev/null; then
+                curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
+                sudo $PKG_INSTALL nodejs
+            fi
+            # Python venv
+            sudo $PKG_INSTALL python3-virtualenv || sudo pip3 install virtualenv
+            ;;
+        arch)
+            sudo $PKG_INSTALL python python-pip nginx git curl nodejs npm
+            sudo $PKG_INSTALL mariadb
+            ;;
+        suse)
+            sudo $PKG_INSTALL python3 python3-pip nginx git curl nodejs npm
+            sudo $PKG_INSTALL mariadb mariadb-client
+            ;;
+        alpine)
+            sudo $PKG_INSTALL python3 py3-pip nginx git curl nodejs npm
+            sudo $PKG_INSTALL mariadb mariadb-client
+            ;;
+    esac
     
     success "依赖安装完成 / Dependencies installed"
 }
 
 # ============================================
-# 3. 配置 MySQL 数据库
+# 启动/停止服务 - 跨平台
 # ============================================
-configure_mysql() {
-    info "配置 MySQL 数据库 / Configuring MySQL..."
+service_start() {
+    local svc=$1
+    case "$SERVICE_MANAGER" in
+        systemd) sudo systemctl start $svc ;;
+        sysvinit) sudo service $svc start ;;
+        openrc) sudo rc-service $svc start ;;
+    esac
+}
+
+service_stop() {
+    local svc=$1
+    case "$SERVICE_MANAGER" in
+        systemd) sudo systemctl stop $svc 2>/dev/null || true ;;
+        sysvinit) sudo service $svc stop 2>/dev/null || true ;;
+        openrc) sudo rc-service $svc stop 2>/dev/null || true ;;
+    esac
+}
+
+service_enable() {
+    local svc=$1
+    case "$SERVICE_MANAGER" in
+        systemd) sudo systemctl enable $svc ;;
+        sysvinit) sudo update-rc.d $svc defaults 2>/dev/null || sudo chkconfig $svc on 2>/dev/null || true ;;
+        openrc) sudo rc-update add $svc default ;;
+    esac
+}
+
+service_restart() {
+    local svc=$1
+    case "$SERVICE_MANAGER" in
+        systemd) sudo systemctl restart $svc ;;
+        sysvinit) sudo service $svc restart ;;
+        openrc) sudo rc-service $svc restart ;;
+    esac
+}
+
+# ============================================
+# 配置 MySQL/MariaDB
+# ============================================
+setup_database() {
+    step "配置数据库 / Setting up database..."
     
     echo ""
-    echo "MySQL 配置选项 / MySQL Configuration:"
-    echo "1. 新建数据库 / Create new database"
-    echo "2. 使用已有数据库 / Use existing database"
-    echo "3. 跳过 / Skip"
-    read -p "请选择 / Choose [1/2/3]: " mysql_choice
+    echo "数据库配置 / Database Setup:"
+    echo "1) 自动创建新数据库 / Auto create new"
+    echo "2) 使用已有数据库 / Use existing"
+    echo "3) 跳过 / Skip"
+    read -p "选择 / Choose [1/2/3]: " db_choice
     
-    case "$mysql_choice" in
+    case "$db_choice" in
         1)
-            # 新建数据库
-            DB_NAME="cloud_storage"
-            DB_USER="clouduser"
-            
-            DB_PASSWORD=$(get_password "请输入新数据库密码 / Enter new database password")
-            
-            if [ -z "$DB_PASSWORD" ]; then
-                error "Password cannot be empty" "密码不能为空"
-                return 1
+            # 启动MySQL/MariaDB
+            local mysql_svc="mysql"
+            if ! service_start mysql 2>/dev/null; then
+                mysql_svc="mariadb"
+                service_start mariadb
             fi
+            service_enable $mysql_svc
             
-            # 获取MySQL root密码
-            MYSQL_ROOT_PASS=$(get_password "请输入 MySQL root 密码 / Enter MySQL root password")
+            export DB_NAME="cloud_storage"
+            export DB_USER="clouduser"
+            export DB_HOST="localhost"
+            export DB_PORT="3306"
             
-            # 创建数据库和用户
-            mysql -u root -p"$MYSQL_ROOT_PASS" <<EOF 2>/dev/null
+            DB_PASSWORD=$(get_password "设置数据库密码 / Set DB password")
+            export DB_PASSWORD
+            
+            MYSQL_ROOT_PASS=$(get_password "MySQL root 密码 / MySQL root password (留空则无密码)")
+            
+            # 创建数据库
+            local mysql_cmd="mysql -u root"
+            [ -n "$MYSQL_ROOT_PASS" ] && mysql_cmd="mysql -u root -p$MYSQL_ROOT_PASS"
+            
+            $mysql_cmd <<EOF 2>/dev/null
 CREATE DATABASE IF NOT EXISTS $DB_NAME CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE USER IF NOT EXISTS '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASSWORD';
 GRANT ALL PRIVILEGES ON $DB_NAME.* TO '$DB_USER'@'localhost';
 FLUSH PRIVILEGES;
 EOF
-            
             if [ $? -eq 0 ]; then
-                success "数据库创建成功 / Database created successfully"
-                export DB_NAME DB_USER DB_PASSWORD
-                export DB_HOST="localhost"
-                export DB_PORT="3306"
+                success "数据库创建成功 / Database created"
             else
-                error "Failed to create database" "数据库创建失败"
-                error "Please check MySQL root password" "请检查 MySQL root 密码是否正确"
+                error "Database creation failed" "数据库创建失败"
+                error "Check MySQL root password" "请检查 MySQL root 密码"
                 return 1
             fi
             ;;
         2)
-            # 使用已有数据库
-            read -p "数据库名 / Database name: " DB_NAME
-            read -p "数据库用户 / Database user: " DB_USER
-            DB_PASSWORD=$(get_password "数据库密码 / Database password")
-            read -p "数据库主机 / Database host [localhost]: " DB_HOST
-            DB_HOST=${DB_HOST:-localhost}
-            read -p "数据库端口 / Database port [3306]: " DB_PORT
-            DB_PORT=${DB_PORT:-3306}
+            read -p "数据库名 / DB name: " DB_NAME
+            read -p "用户名 / Username: " DB_USER
+            DB_PASSWORD=$(get_password "密码 / Password")
+            read -p "主机 / Host [localhost]: " DB_HOST
+            read -p "端口 / Port [3306]: " DB_PORT
+            export DB_NAME DB_USER DB_PASSWORD
+            export DB_HOST=${DB_HOST:-localhost}
+            export DB_PORT=${DB_PORT:-3306}
             
             # 测试连接
-            mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASSWORD" -e "USE $DB_NAME;" 2>/dev/null
-            
+            mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASSWORD" -e "USE $DB_NAME" 2>/dev/null
             if [ $? -eq 0 ]; then
-                success "数据库连接成功 / Database connection successful"
-                export DB_NAME DB_USER DB_PASSWORD DB_HOST DB_PORT
+                success "数据库连接成功 / Database connected"
             else
-                error "Failed to connect to database" "数据库连接失败"
-                error "Please check database credentials" "请检查数据库凭据是否正确"
+                error "Connection failed" "连接失败"
                 return 1
             fi
             ;;
         3)
-            warning "跳过 MySQL 配置 / Skipping MySQL configuration"
-            return 2
+            warning "跳过数据库配置 / Skipping database"
             ;;
     esac
 }
 
 # ============================================
-# 4. 配置 OpenStack Swift
+# 配置 OpenStack Swift
 # ============================================
-configure_swift() {
-    info "配置 OpenStack Swift / Configuring OpenStack Swift..."
+setup_swift() {
+    step "配置存储后端 / Setting up storage..."
     
     echo ""
-    echo "Swift 配置选项 / Swift Configuration:"
-    echo "1. 配置 Swift / Configure Swift"
-    echo "2. 使用本地存储 / Use local storage"
-    echo "3. 跳过 / Skip"
-    read -p "请选择 / Choose [1/2/3]: " swift_choice
+    echo "存储配置 / Storage Setup:"
+    echo "1) 配置 OpenStack Swift"
+    echo "2) 使用本地存储 / Local storage"
+    echo "3) 跳过 / Skip"
+    read -p "选择 / Choose [1/2/3]: " swift_choice
     
     case "$swift_choice" in
         1)
-            read -p "Keystone Auth URL (e.g., http://host/identity/v3): " OS_AUTH_URL
+            read -p "Auth URL (http://host/identity/v3): " OS_AUTH_URL
             read -p "Username: " OS_USERNAME
             OS_PASSWORD=$(get_password "Password")
-            read -p "Project Name: " OS_PROJECT_NAME
-            read -p "User Domain ID [default]: " OS_USER_DOMAIN_ID
-            OS_USER_DOMAIN_ID=${OS_USER_DOMAIN_ID:-default}
-            read -p "Project Domain ID [default]: " OS_PROJECT_DOMAIN_ID
-            OS_PROJECT_DOMAIN_ID=${OS_PROJECT_DOMAIN_ID:-default}
-            read -p "Region Name [RegionOne]: " OS_REGION_NAME
-            OS_REGION_NAME=${OS_REGION_NAME:-RegionOne}
+            read -p "Project: " OS_PROJECT_NAME
+            read -p "User Domain [default]: " OS_USER_DOMAIN_ID
+            read -p "Project Domain [default]: " OS_PROJECT_DOMAIN_ID
+            read -p "Region [RegionOne]: " OS_REGION_NAME
             
-            # 测试 Swift 连接
             export OS_AUTH_URL OS_USERNAME OS_PASSWORD OS_PROJECT_NAME
-            export OS_USER_DOMAIN_ID OS_PROJECT_DOMAIN_ID OS_REGION_NAME
+            export OS_USER_DOMAIN_ID=${OS_USER_DOMAIN_ID:-default}
+            export OS_PROJECT_DOMAIN_ID=${OS_PROJECT_DOMAIN_ID:-default}
+            export OS_REGION_NAME=${OS_REGION_NAME:-RegionOne}
+            export STORAGE_BACKEND="swift"
             
-            if command -v swift &> /dev/null; then
-                swift stat 2>/dev/null
-                if [ $? -eq 0 ]; then
-                    success "Swift 连接成功 / Swift connection successful"
-                else
-                    error "Failed to connect to Swift" "Swift 连接失败"
-                    error "Please check Swift credentials" "请检查 Swift 凭据是否正确"
-                    return 1
-                fi
-            else
-                warning "swift 命令未安装，跳过连接测试 / swift command not installed, skipping test"
-            fi
+            success "Swift 配置完成 / Swift configured"
             ;;
         2)
-            info "使用本地存储模式 / Using local storage mode"
             export STORAGE_BACKEND="local"
+            success "使用本地存储 / Using local storage"
             ;;
         3)
-            warning "跳过 Swift 配置 / Skipping Swift configuration"
-            return 2
+            warning "跳过存储配置 / Skipping storage"
             ;;
     esac
 }
 
 # ============================================
-# 5. 部署后端
+# 部署后端
 # ============================================
 deploy_backend() {
-    info "部署后端服务 / Deploying backend..."
+    step "部署后端 / Deploying backend..."
     
-    DEPLOY_DIR=${DEPLOY_DIR:-$(pwd)}
     cd "$DEPLOY_DIR"
     
     # 创建虚拟环境
     if [ ! -d "venv" ]; then
-        python3 -m venv venv
+        python3 -m venv venv || virtualenv venv
     fi
-    
     source venv/bin/activate
     
     # 安装依赖
+    pip install --upgrade pip
     pip install -r requirements.txt
-    pip install gunicorn
+    pip install gunicorn mysqlclient
     
-    # 生成 SECRET_KEY
+    # 生成密钥
     export SECRET_KEY=$(python3 -c "import secrets; print(secrets.token_urlsafe(50))")
     
     # 迁移数据库
-    python manage.py migrate 2>/dev/null
+    python manage.py migrate
     if [ $? -ne 0 ]; then
-        error "Database migration failed" "数据库迁移失败"
-        error "Please check database configuration" "请检查数据库配置"
+        error "Migration failed" "数据库迁移失败"
         return 1
     fi
     
-    # 收集静态文件
     python manage.py collectstatic --noinput
     
     success "后端部署完成 / Backend deployed"
 }
 
 # ============================================
-# 6. 配置用户注册
+# 配置注册与管理员
 # ============================================
-configure_registration() {
-    info "配置用户注册 / Configuring user registration..."
+setup_admin() {
+    step "配置用户注册 / Setting up registration..."
     
     echo ""
-    read -p "是否允许用户注册？/ Allow user registration? [y/n]: " allow_reg
+    read -p "允许用户注册? / Allow registration? [y/n]: " allow_reg
     
-    if [[ "$allow_reg" =~ ^[Yy]$ ]]; then
-        export ALLOW_REGISTRATION="true"
-        success "已启用用户注册 / User registration enabled"
-    else
+    if [[ "$allow_reg" =~ ^[Nn]$ ]]; then
         export ALLOW_REGISTRATION="false"
-        warning "已禁用用户注册 / User registration disabled"
+        warning "已禁用注册 / Registration disabled"
         
         echo ""
-        info "请创建管理员账户 / Please create admin account"
-        read -p "管理员用户名 / Admin username: " ADMIN_USER
-        ADMIN_PASSWORD=$(get_password "管理员密码 / Admin password")
-        read -p "管理员邮箱 / Admin email: " ADMIN_EMAIL
+        info "创建管理员 / Create admin"
+        read -p "用户名 / Username: " ADMIN_USER
+        ADMIN_PASS=$(get_password "密码 / Password")
+        read -p "邮箱 / Email: " ADMIN_EMAIL
         
-        # 创建超级用户
         source venv/bin/activate
-        echo "from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.create_superuser('$ADMIN_USER', '$ADMIN_EMAIL', '$ADMIN_PASSWORD') if not User.objects.filter(username='$ADMIN_USER').exists() else None" | python manage.py shell
+        python manage.py shell <<EOF
+from django.contrib.auth import get_user_model
+User = get_user_model()
+if not User.objects.filter(username='$ADMIN_USER').exists():
+    User.objects.create_superuser('$ADMIN_USER', '$ADMIN_EMAIL', '$ADMIN_PASS')
+    print('Admin created')
+EOF
+        success "管理员创建成功 / Admin created"
+    else
+        export ALLOW_REGISTRATION="true"
+        success "已启用注册 / Registration enabled"
         
-        if [ $? -eq 0 ]; then
-            success "管理员账户创建成功 / Admin account created"
-        else
-            error "Failed to create admin account" "管理员账户创建失败"
+        echo ""
+        read -p "是否创建管理员? / Create admin? [y/n]: " create_admin
+        if [[ "$create_admin" =~ ^[Yy]$ ]]; then
+            python manage.py createsuperuser
         fi
     fi
 }
 
 # ============================================
-# 7. 部署前端
+# 部署前端
 # ============================================
 deploy_frontend() {
-    info "部署前端 / Deploying frontend..."
+    step "部署前端 / Deploying frontend..."
     
-    cd frontend
+    cd "$DEPLOY_DIR/frontend"
     
-    npm install 2>/dev/null
+    npm install
     if [ $? -ne 0 ]; then
         error "npm install failed" "npm 安装失败"
-        error "Please check Node.js installation" "请检查 Node.js 是否正确安装"
         return 1
     fi
     
-    npm run build 2>/dev/null
+    npm run build
     if [ $? -ne 0 ]; then
-        error "npm build failed" "npm 构建失败"
-        error "Please check frontend code" "请检查前端代码"
+        error "npm build failed" "前端构建失败"
         return 1
     fi
     
-    cd ..
+    cd "$DEPLOY_DIR"
     success "前端部署完成 / Frontend deployed"
 }
 
 # ============================================
-# 8. 配置 Nginx
+# 配置 Nginx
 # ============================================
-configure_nginx() {
-    info "配置 Nginx / Configuring Nginx..."
+setup_nginx() {
+    step "配置 Nginx / Setting up Nginx..."
     
-    read -p "请输入域名或IP / Enter domain or IP: " SERVER_NAME
+    read -p "域名或IP / Domain or IP: " SERVER_NAME
+    SERVER_NAME=${SERVER_NAME:-localhost}
     
-    NGINX_CONF="/etc/nginx/sites-available/cloudstorage"
+    local nginx_conf=""
+    if [ -d "/etc/nginx/sites-available" ]; then
+        nginx_conf="/etc/nginx/sites-available/cloudstorage"
+    elif [ -d "/etc/nginx/conf.d" ]; then
+        nginx_conf="/etc/nginx/conf.d/cloudstorage.conf"
+    else
+        nginx_conf="/etc/nginx/nginx.conf.d/cloudstorage.conf"
+        sudo mkdir -p /etc/nginx/nginx.conf.d
+    fi
     
-    sudo tee $NGINX_CONF > /dev/null <<EOF
+    sudo tee $nginx_conf > /dev/null <<EOF
 server {
     listen 80;
     server_name $SERVER_NAME;
+    client_max_body_size 100M;
 
     location / {
-        root $(pwd)/frontend/build;
+        root $DEPLOY_DIR/frontend/build;
         try_files \$uri \$uri/ /index.html;
     }
 
@@ -354,6 +482,7 @@ server {
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
     }
 
     location /admin/ {
@@ -362,135 +491,140 @@ server {
     }
 
     location /static/ {
-        alias $(pwd)/staticfiles/;
+        alias $DEPLOY_DIR/staticfiles/;
     }
 
     location /media/ {
-        alias $(pwd)/media/;
+        alias $DEPLOY_DIR/media/;
     }
 }
 EOF
 
-    sudo ln -sf $NGINX_CONF /etc/nginx/sites-enabled/
-    sudo nginx -t 2>/dev/null
+    # 创建符号链接 (Debian系)
+    if [ -d "/etc/nginx/sites-enabled" ] && [ -f "/etc/nginx/sites-available/cloudstorage" ]; then
+        sudo ln -sf /etc/nginx/sites-available/cloudstorage /etc/nginx/sites-enabled/
+        sudo rm -f /etc/nginx/sites-enabled/default 2>/dev/null || true
+    fi
     
+    sudo nginx -t
     if [ $? -eq 0 ]; then
-        sudo systemctl restart nginx
+        service_restart nginx
         success "Nginx 配置完成 / Nginx configured"
     else
-        error "Nginx configuration error" "Nginx 配置错误"
-        error "Please check nginx config file" "请检查 nginx 配置文件"
+        error "Nginx config error" "Nginx 配置错误"
         return 1
     fi
 }
 
 # ============================================
-# 9. 配置 Gunicorn 服务
+# 配置 Gunicorn 服务
 # ============================================
-configure_gunicorn() {
-    info "配置 Gunicorn 服务 / Configuring Gunicorn service..."
+setup_gunicorn() {
+    step "配置 Gunicorn 服务 / Setting up Gunicorn..."
     
-    SERVICE_FILE="/etc/systemd/system/cloudstorage.service"
-    
-    sudo tee $SERVICE_FILE > /dev/null <<EOF
+    if [ "$SERVICE_MANAGER" = "systemd" ]; then
+        sudo tee /etc/systemd/system/cloudstorage.service > /dev/null <<EOF
 [Unit]
-Description=Simple Cloud Storage Backend
+Description=Simple Cloud Storage
 After=network.target
 
 [Service]
 User=$(whoami)
 Group=$(whoami)
-WorkingDirectory=$(pwd)
-Environment="PATH=$(pwd)/venv/bin"
+WorkingDirectory=$DEPLOY_DIR
+Environment="PATH=$DEPLOY_DIR/venv/bin"
 Environment="DB_NAME=${DB_NAME:-cloud_storage}"
 Environment="DB_USER=${DB_USER:-clouduser}"
 Environment="DB_PASSWORD=${DB_PASSWORD:-}"
 Environment="DB_HOST=${DB_HOST:-localhost}"
 Environment="DB_PORT=${DB_PORT:-3306}"
 Environment="SECRET_KEY=${SECRET_KEY}"
-ExecStart=$(pwd)/venv/bin/gunicorn --workers 3 --bind 127.0.0.1:8000 cloud_storage.wsgi:application
+Environment="STORAGE_BACKEND=${STORAGE_BACKEND:-local}"
+ExecStart=$DEPLOY_DIR/venv/bin/gunicorn --workers 3 --bind 127.0.0.1:8000 cloud_storage.wsgi:application
+Restart=always
 
 [Install]
 WantedBy=multi-user.target
 EOF
-
-    sudo systemctl daemon-reload
-    sudo systemctl start cloudstorage
-    sudo systemctl enable cloudstorage
-    
-    if [ $? -eq 0 ]; then
-        success "Gunicorn 服务配置完成 / Gunicorn service configured"
+        sudo systemctl daemon-reload
+        sudo systemctl start cloudstorage
+        sudo systemctl enable cloudstorage
     else
-        error "Failed to start Gunicorn service" "Gunicorn 服务启动失败"
-        return 1
+        # 非 systemd 系统使用启动脚本
+        cat > "$DEPLOY_DIR/start.sh" <<EOF
+#!/bin/bash
+cd $DEPLOY_DIR
+source venv/bin/activate
+export DB_NAME=${DB_NAME:-cloud_storage}
+export DB_USER=${DB_USER:-clouduser}
+export DB_PASSWORD="${DB_PASSWORD:-}"
+export DB_HOST=${DB_HOST:-localhost}
+export DB_PORT=${DB_PORT:-3306}
+export SECRET_KEY="${SECRET_KEY}"
+gunicorn --workers 3 --bind 127.0.0.1:8000 --daemon cloud_storage.wsgi:application
+EOF
+        chmod +x "$DEPLOY_DIR/start.sh"
+        "$DEPLOY_DIR/start.sh"
     fi
+    
+    success "Gunicorn 服务已启动 / Gunicorn started"
 }
 
 # ============================================
 # 主流程
 # ============================================
 main() {
-    echo ""
-    echo "============================================"
-    echo "  简单云盘 - 自动部署脚本"
-    echo "  Simple Cloud Storage - Auto Deploy"
-    echo "============================================"
-    echo ""
+    print_banner
     
-    # 1. 检测系统
-    check_system
+    # 设置部署目录
+    DEPLOY_DIR=$(cd "$(dirname "$0")/.." && pwd)
+    info "部署目录 / Deploy dir: $DEPLOY_DIR"
     
-    # 2. 安装依赖
+    # 检测系统
+    detect_os
+    
+    # 安装依赖
     echo ""
-    read -p "是否安装基础依赖？/ Install dependencies? [y/n]: " install_deps
-    if [[ "$install_deps" =~ ^[Yy]$ ]]; then
-        install_dependencies
-    fi
+    read -p "安装系统依赖? / Install dependencies? [y/n]: " install_deps
+    [[ "$install_deps" =~ ^[Yy]$ ]] && install_packages
     
-    # 3. 配置 MySQL
+    # 配置数据库
     echo ""
-    configure_mysql
-    mysql_status=$?
+    setup_database
     
-    # 4. 配置 Swift
+    # 配置存储
     echo ""
-    configure_swift
-    swift_status=$?
+    setup_swift
     
-    # 5. 部署后端
+    # 部署后端
     echo ""
     deploy_backend || exit 1
     
-    # 6. 配置注册
+    # 配置管理员
     echo ""
-    configure_registration
+    setup_admin
     
-    # 7. 部署前端
+    # 部署前端
     echo ""
     deploy_frontend || exit 1
     
-    # 8. 配置 Nginx
+    # 配置 Nginx
     echo ""
-    read -p "是否配置 Nginx？/ Configure Nginx? [y/n]: " config_nginx
-    if [[ "$config_nginx" =~ ^[Yy]$ ]]; then
-        configure_nginx
-    fi
+    read -p "配置 Nginx? [y/n]: " setup_ng
+    [[ "$setup_ng" =~ ^[Yy]$ ]] && setup_nginx
     
-    # 9. 配置 Gunicorn
+    # 配置 Gunicorn
     echo ""
-    read -p "是否配置 Gunicorn 服务？/ Configure Gunicorn? [y/n]: " config_gunicorn
-    if [[ "$config_gunicorn" =~ ^[Yy]$ ]]; then
-        configure_gunicorn
-    fi
+    read -p "配置后台服务? / Setup service? [y/n]: " setup_svc
+    [[ "$setup_svc" =~ ^[Yy]$ ]] && setup_gunicorn
     
     # 完成
     echo ""
     print_cloud_art
     echo ""
-    info "访问地址 / Access URL: http://${SERVER_NAME:-localhost}"
-    info "管理后台 / Admin Panel: http://${SERVER_NAME:-localhost}/admin"
+    info "访问 / URL: http://${SERVER_NAME:-localhost}"
+    info "后台 / Admin: http://${SERVER_NAME:-localhost}/admin"
     echo ""
 }
 
-# 运行主流程
 main "$@"
