@@ -146,17 +146,19 @@ chmod +x scripts/deploy.sh
 **脚本功能**：
 - 自动识别 Linux 发行版和包管理器
 - 交互式配置 MySQL 数据库
-- 交互式配置 OpenStack Swift（可选）
+- 自动安装 OpenStack DevStack + Swift（需 4GB+ 内存）
 - 自动部署前后端
-- 配置 Nginx 和 Gunicorn 服务
-- 支持禁用注册并手动创建管理员
+- Nginx 配置：自动获取IP、支持多域名、自动申请SSL证书
+- 配置 Gunicorn 后台服务
+- 部署完成显示服务端口和访问地址
 - 中英文错误提示
 
 #### 7.1 服务器要求
 
-- **操作系统**：Ubuntu / Debian / CentOS / RHEL / Fedora / Arch 等主流 Linux
+- **操作系统**：Linux（不支持 Windows/macOS）
 - **最低配置**：2核 CPU、2GB 内存、20GB 硬盘
-- **开放端口**：80、443
+- **Swift 配置**：需 4GB+ 内存
+- **开放端口**：80、44、8000、3306
 
 #### 7.2 部署后更新
 
@@ -164,14 +166,6 @@ chmod +x scripts/deploy.sh
 cd /var/www/simple-cloud-storage
 git pull origin main
 ./scripts/deploy.sh
-```
-
-#### 7.3 配置 HTTPS（可选）
-
-```bash
-# Ubuntu/Debian
-sudo apt install -y certbot python3-certbot-nginx
-sudo certbot --nginx -d your_domain.com
 ```
 
 ---
@@ -355,17 +349,19 @@ chmod +x scripts/deploy.sh
 **Features**:
 - Auto-detect Linux distribution and package manager
 - Interactive MySQL database configuration
-- Interactive OpenStack Swift configuration (optional)
+- Auto install OpenStack DevStack + Swift (requires 4GB+ RAM)
 - Auto deploy frontend and backend
-- Configure Nginx and Gunicorn services
-- Support disabling registration and manual admin creation
+- Nginx config: auto-detect IP, multi-domain support, auto SSL certificate
+- Configure Gunicorn backend service
+- Display service ports and access URLs after deployment
 - Bilingual error messages (English/Chinese)
 
 #### 7.1 Server Requirements
 
-- **OS**: Ubuntu / Debian / CentOS / RHEL / Fedora / Arch and other mainstream Linux
+- **OS**: Linux only (Windows/macOS not supported)
 - **Minimum**: 2 CPU cores, 2GB RAM, 20GB disk
-- **Open Ports**: 80, 443
+- **Swift**: Requires 4GB+ RAM
+- **Open Ports**: 80, 443, 8000, 3306
 
 #### 7.2 Update After Deployment
 
@@ -373,14 +369,6 @@ chmod +x scripts/deploy.sh
 cd /var/www/simple-cloud-storage
 git pull origin main
 ./scripts/deploy.sh
-```
-
-#### 7.3 Configure HTTPS (Optional)
-
-```bash
-# Ubuntu/Debian
-sudo apt install -y certbot python3-certbot-nginx
-sudo certbot --nginx -d your_domain.com
 ```
 
 ---
