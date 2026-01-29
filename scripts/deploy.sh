@@ -311,18 +311,156 @@ EOF
 # ============================================
 # 配置 OpenStack Swift
 # ============================================
+# ============================================
+# 生成强密码
+# ============================================
+generate_strong_password() {
+    local length=${1:-32}
+    python3 -c "import secrets, string; print(''.join(secrets.choice(string.ascii_letters + string.digits + '!@#$%^&*') for _ in range($length)))"
+}
+
+# ============================================
+# 自动安装 OpenStack DevStack
+# ============================================
+install_devstack() {
+    step "安装 OpenStack DevStack / Installing DevStack..."
+    
+    # 检查是否已安装
+    if [ -d "/opt/stack/devstack" ]; then
+        warning "DevStack 已存在 / DevStack already exists"
+        read -p "重新安装? / Reinstall? [y/n]: " reinstall
+        if [[ ! "$reinstall" =~ ^[Yy]$ ]]; then
+            return 0
+        fi
+    fi
+    
+    # 检查系统要求
+    local mem_gb=$(free -g | awk '/^Mem:/{print $2}')
+    if [ "$mem_gb" -lt 4 ]; then
+        warning "内存不足 4GB，DevStack 可能运行缓慢 / Less than 4GB RAM"
+        read -p "继续? / Continue? [y/n]: " cont
+        [[ ! "$cont" =~ ^[Yy]$ ]] && return 1
+    fi
+    
+    # 安装依赖
+    info "安装 DevStack 依赖 / Installing DevStack dependencies..."
+    sudo $PKG_UPDATE
+    sudo $PKG_INSTALL git curl sudo
+    
+    # 创建 stack 用户
+    if ! id "stack" &>/dev/null; then
+        info "创建 stack 用户 / Creating stack user..."
+        sudo useradd -s /bin/bash -d /opt/stack -m stack
+        echo "stack ALL=(ALL) NOPASSWD: ALL" | sudo tee /etc/sudoers.d/stack
+    fi
+    
+    # 生成强密码
+    DEVSTACK_PASSWORD=$(generate_strong_password 24)
+    export DEVSTACK_PASSWORD
+    
+    info "生成的强密码 / Generated strong password: $DEVSTACK_PASSWORD"
+    info "请保存此密码 / Please save this password!"
+    echo ""
+    
+    # 克隆 DevStack
+    info "克隆 DevStack / Cloning DevStack..."
+    sudo -u stack git clone https://opendev.org/openstack/devstack /opt/stack/devstack 2>/dev/null || true
+    
+    # 创建 local.conf
+    local HOST_IP=$(hostname -I | awk '{print $1}')
+    
+    sudo -u stack tee /opt/stack/devstack/local.conf > /dev/null <<EOF
+[[local|localrc]]
+# 密码配置 - 使用强密码
+ADMIN_PASSWORD=$DEVSTACK_PASSWORD
+DATABASE_PASSWORD=$DEVSTACK_PASSWORD
+RABBIT_PASSWORD=$DEVSTACK_PASSWORD
+SERVICE_PASSWORD=$DEVSTACK_PASSWORD
+
+# 网络配置
+HOST_IP=$HOST_IP
+FLOATING_RANGE=192.168.1.0/24
+FIXED_RANGE=10.11.12.0/24
+FIXED_NETWORK_SIZE=256
+
+# 启用 Swift 对象存储
+ENABLE_SERVICE=s-proxy,s-object,s-container,s-account
+SWIFT_HASH=$(openssl rand -hex 16)
+SWIFT_REPLICAS=1
+
+# 禁用不需要的服务 - 最小化安装
+DISABLE_SERVICE=n-net,tempest,c-api,c-vol,c-sch,c-bak
+disable_service horizon
+
+# 日志配置
+LOGFILE=/opt/stack/logs/stack.sh.log
+VERBOSE=True
+LOG_COLOR=True
+
+# 分支配置
+KEYSTONE_BRANCH=stable/2024.1
+SWIFT_BRANCH=stable/2024.1
+EOF
+    
+    # 运行 DevStack 安装
+    info "开始安装 DevStack（需要 20-40 分钟）/ Starting DevStack installation (20-40 mins)..."
+    
+    cd /opt/stack/devstack
+    sudo -u stack ./stack.sh
+    
+    if [ $? -eq 0 ]; then
+        success "DevStack 安装成功 / DevStack installed successfully"
+        
+        # 保存配置信息
+        echo ""
+        echo -e "${GREEN}========================================${NC}"
+        echo -e "${GREEN}OpenStack 配置信息 / Configuration Info${NC}"
+        echo -e "${GREEN}========================================${NC}"
+        echo "Auth URL: http://$HOST_IP/identity/v3"
+        echo "Username: admin"
+        echo "Password: $DEVSTACK_PASSWORD"
+        echo "Project: admin"
+        echo "Region: RegionOne"
+        echo -e "${GREEN}========================================${NC}"
+        
+        # 自动配置环境变量
+        export OS_AUTH_URL="http://$HOST_IP/identity/v3"
+        export OS_USERNAME="admin"
+        export OS_PASSWORD="$DEVSTACK_PASSWORD"
+        export OS_PROJECT_NAME="admin"
+        export OS_USER_DOMAIN_ID="default"
+        export OS_PROJECT_DOMAIN_ID="default"
+        export OS_REGION_NAME="RegionOne"
+        export STORAGE_BACKEND="swift"
+        
+        return 0
+    else
+        error "DevStack installation failed" "DevStack 安装失败"
+        error "Check logs at /opt/stack/logs/" "请检查日志 /opt/stack/logs/"
+        return 1
+    fi
+}
+
 setup_swift() {
     step "配置存储后端 / Setting up storage..."
     
     echo ""
     echo "存储配置 / Storage Setup:"
-    echo "1) 配置 OpenStack Swift"
-    echo "2) 使用本地存储 / Local storage"
-    echo "3) 跳过 / Skip"
-    read -p "选择 / Choose [1/2/3]: " swift_choice
+    echo "1) 自动安装 OpenStack DevStack + Swift（推荐）"
+    echo "2) 连接已有 OpenStack Swift"
+    echo "3) 使用本地存储 / Local storage"
+    echo "4) 跳过 / Skip"
+    read -p "选择 / Choose [1/2/3/4]: " swift_choice
     
     case "$swift_choice" in
         1)
+            install_devstack
+            if [ $? -eq 0 ]; then
+                # 写入配置文件
+                write_swift_config
+            fi
+            ;;
+        2)
             read -p "Auth URL (http://host/identity/v3): " OS_AUTH_URL
             read -p "Username: " OS_USERNAME
             OS_PASSWORD=$(get_password "Password")
@@ -337,16 +475,48 @@ setup_swift() {
             export OS_REGION_NAME=${OS_REGION_NAME:-RegionOne}
             export STORAGE_BACKEND="swift"
             
+            write_swift_config
             success "Swift 配置完成 / Swift configured"
             ;;
-        2)
+        3)
             export STORAGE_BACKEND="local"
             success "使用本地存储 / Using local storage"
             ;;
-        3)
+        4)
             warning "跳过存储配置 / Skipping storage"
             ;;
     esac
+}
+
+# 写入 Swift 配置到项目
+write_swift_config() {
+    step "写入 Swift 配置到项目 / Writing Swift config..."
+    
+    # 创建 .env 文件
+    cat > "$DEPLOY_DIR/.env" <<EOF
+# OpenStack Swift 配置 - 自动生成
+OS_AUTH_URL=$OS_AUTH_URL
+OS_USERNAME=$OS_USERNAME
+OS_PASSWORD=$OS_PASSWORD
+OS_PROJECT_NAME=$OS_PROJECT_NAME
+OS_USER_DOMAIN_ID=${OS_USER_DOMAIN_ID:-default}
+OS_PROJECT_DOMAIN_ID=${OS_PROJECT_DOMAIN_ID:-default}
+OS_REGION_NAME=${OS_REGION_NAME:-RegionOne}
+STORAGE_BACKEND=swift
+
+# 数据库配置
+DB_NAME=${DB_NAME:-cloud_storage}
+DB_USER=${DB_USER:-clouduser}
+DB_PASSWORD=${DB_PASSWORD:-}
+DB_HOST=${DB_HOST:-localhost}
+DB_PORT=${DB_PORT:-3306}
+
+# Django
+SECRET_KEY=${SECRET_KEY:-}
+EOF
+    
+    chmod 600 "$DEPLOY_DIR/.env"
+    success "配置已写入 .env 文件 / Config written to .env"
 }
 
 # ============================================
