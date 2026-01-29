@@ -238,211 +238,26 @@ chmod +x scripts/deploy.sh
 - 支持禁用注册并手动创建管理员
 - 中英文错误提示
 
-如需手动部署，请参考以下步骤：
-
 #### 7.1 服务器要求
 
-- **操作系统**：Ubuntu 20.04+ / CentOS 7+ / Debian 10+
-- **配置要求**：
-  - CPU：2核+
-  - 内存：4GB+
-  - 硬盘：20GB+
-- **开放端口**：80、443、8000、3306
+- **操作系统**：Ubuntu / Debian / CentOS / RHEL / Fedora / Arch 等主流 Linux
+- **最低配置**：2核 CPU、2GB 内存、20GB 硬盘
+- **开放端口**：80、443
 
-#### 7.2 安装基础环境
+#### 7.2 部署后更新
 
 ```bash
-# Ubuntu / Debian
-sudo apt update
-sudo apt install -y python3 python3-pip python3-venv nginx mysql-server nodejs npm git
-
-# CentOS
-sudo yum install -y python3 python3-pip nginx mysql-server nodejs npm git
+cd /var/www/simple-cloud-storage
+git pull origin main
+./scripts/deploy.sh
 ```
 
-#### 7.3 配置 MySQL
+#### 7.3 配置 HTTPS（可选）
 
 ```bash
-# 启动 MySQL
-sudo systemctl start mysql
-sudo systemctl enable mysql
-
-# 安全配置
-sudo mysql_secure_installation
-
-# 创建数据库和用户
-sudo mysql -u root -p
-```
-
-```sql
-CREATE DATABASE cloud_storage CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'clouduser'@'localhost' IDENTIFIED BY 'your_password';
-GRANT ALL PRIVILEGES ON cloud_storage.* TO 'clouduser'@'localhost';
-FLUSH PRIVILEGES;
-EXIT;
-```
-
-#### 7.4 部署后端
-
-```bash
-# 克隆项目
-cd /var/www
-sudo git clone https://github.com/songdiyang/simple-cloud-storage.git
-cd simple-cloud-storage
-
-# 创建虚拟环境
-python3 -m venv venv
-source venv/bin/activate
-
-# 安装依赖
-pip install -r requirements.txt
-pip install gunicorn
-
-# 配置环境变量
-export DB_NAME=cloud_storage
-export DB_USER=clouduser
-export DB_PASSWORD=your_password
-export DB_HOST=localhost
-export DB_PORT=3306
-export SECRET_KEY=your_django_secret_key
-
-# 迁移数据库
-python manage.py migrate
-python manage.py collectstatic --noinput
-python manage.py createsuperuser
-```
-
-#### 7.5 配置 Gunicorn
-
-创建 systemd 服务文件：
-
-```bash
-sudo nano /etc/systemd/system/cloudstorage.service
-```
-
-内容如下：
-
-```ini
-[Unit]
-Description=Simple Cloud Storage Backend
-After=network.target
-
-[Service]
-User=www-data
-Group=www-data
-WorkingDirectory=/var/www/simple-cloud-storage
-Environment="PATH=/var/www/simple-cloud-storage/venv/bin"
-Environment="DB_NAME=cloud_storage"
-Environment="DB_USER=clouduser"
-Environment="DB_PASSWORD=your_password"
-ExecStart=/var/www/simple-cloud-storage/venv/bin/gunicorn --workers 3 --bind 127.0.0.1:8000 cloud_storage.wsgi:application
-
-[Install]
-WantedBy=multi-user.target
-```
-
-启动服务：
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl start cloudstorage
-sudo systemctl enable cloudstorage
-```
-
-#### 7.6 部署前端
-
-```bash
-cd /var/www/simple-cloud-storage/frontend
-
-# 安装依赖并构建
-npm install
-npm run build
-```
-
-#### 7.7 配置 Nginx
-
-```bash
-sudo nano /etc/nginx/sites-available/cloudstorage
-```
-
-配置内容：
-
-```nginx
-server {
-    listen 80;
-    server_name your_domain.com;
-
-    # 前端静态文件
-    location / {
-        root /var/www/simple-cloud-storage/frontend/build;
-        try_files $uri $uri/ /index.html;
-    }
-
-    # API 反向代理
-    location /api/ {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    }
-
-    # Django Admin
-    location /admin/ {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_set_header Host $host;
-    }
-
-    # 静态文件
-    location /static/ {
-        alias /var/www/simple-cloud-storage/staticfiles/;
-    }
-
-    # 媒体文件
-    location /media/ {
-        alias /var/www/simple-cloud-storage/media/;
-    }
-}
-```
-
-启用配置：
-
-```bash
-sudo ln -s /etc/nginx/sites-available/cloudstorage /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl restart nginx
-```
-
-#### 7.8 配置 HTTPS（推荐）
-
-```bash
-# 安装 Certbot
+# Ubuntu/Debian
 sudo apt install -y certbot python3-certbot-nginx
-
-# 获取证书
 sudo certbot --nginx -d your_domain.com
-
-# 自动续期
-sudo systemctl enable certbot.timer
-```
-
-#### 7.9 常见问题
-
-**Q: 端口被占用？**
-```bash
-sudo lsof -i :8000
-sudo kill -9 <PID>
-```
-
-**Q: 静态文件无法访问？**
-```bash
-python manage.py collectstatic --noinput
-sudo chown -R www-data:www-data /var/www/simple-cloud-storage
-```
-
-**Q: 服务无法启动？**
-```bash
-sudo systemctl status cloudstorage
-sudo journalctl -u cloudstorage -f
 ```
 
 ---
@@ -714,211 +529,26 @@ chmod +x scripts/deploy.sh
 - Support disabling registration and manual admin creation
 - Bilingual error messages (English/Chinese)
 
-For manual deployment, please refer to the following steps:
-
 #### 7.1 Server Requirements
 
-- **OS**: Ubuntu 20.04+ / CentOS 7+ / Debian 10+
-- **Resources**:
-  - CPU: 2 cores+
-  - RAM: 4GB+
-  - Disk: 20GB+
-- **Open Ports**: 80, 443, 8000, 3306
+- **OS**: Ubuntu / Debian / CentOS / RHEL / Fedora / Arch and other mainstream Linux
+- **Minimum**: 2 CPU cores, 2GB RAM, 20GB disk
+- **Open Ports**: 80, 443
 
-#### 7.2 Install Base Environment
+#### 7.2 Update After Deployment
 
 ```bash
-# Ubuntu / Debian
-sudo apt update
-sudo apt install -y python3 python3-pip python3-venv nginx mysql-server nodejs npm git
-
-# CentOS
-sudo yum install -y python3 python3-pip nginx mysql-server nodejs npm git
+cd /var/www/simple-cloud-storage
+git pull origin main
+./scripts/deploy.sh
 ```
 
-#### 7.3 Configure MySQL
+#### 7.3 Configure HTTPS (Optional)
 
 ```bash
-# Start MySQL
-sudo systemctl start mysql
-sudo systemctl enable mysql
-
-# Security setup
-sudo mysql_secure_installation
-
-# Create database and user
-sudo mysql -u root -p
-```
-
-```sql
-CREATE DATABASE cloud_storage CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'clouduser'@'localhost' IDENTIFIED BY 'your_password';
-GRANT ALL PRIVILEGES ON cloud_storage.* TO 'clouduser'@'localhost';
-FLUSH PRIVILEGES;
-EXIT;
-```
-
-#### 7.4 Deploy Backend
-
-```bash
-# Clone project
-cd /var/www
-sudo git clone https://github.com/songdiyang/simple-cloud-storage.git
-cd simple-cloud-storage
-
-# Create virtual environment
-python3 -m venv venv
-source venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-pip install gunicorn
-
-# Configure environment variables
-export DB_NAME=cloud_storage
-export DB_USER=clouduser
-export DB_PASSWORD=your_password
-export DB_HOST=localhost
-export DB_PORT=3306
-export SECRET_KEY=your_django_secret_key
-
-# Migrate database
-python manage.py migrate
-python manage.py collectstatic --noinput
-python manage.py createsuperuser
-```
-
-#### 7.5 Configure Gunicorn
-
-Create systemd service file:
-
-```bash
-sudo nano /etc/systemd/system/cloudstorage.service
-```
-
-Content:
-
-```ini
-[Unit]
-Description=Simple Cloud Storage Backend
-After=network.target
-
-[Service]
-User=www-data
-Group=www-data
-WorkingDirectory=/var/www/simple-cloud-storage
-Environment="PATH=/var/www/simple-cloud-storage/venv/bin"
-Environment="DB_NAME=cloud_storage"
-Environment="DB_USER=clouduser"
-Environment="DB_PASSWORD=your_password"
-ExecStart=/var/www/simple-cloud-storage/venv/bin/gunicorn --workers 3 --bind 127.0.0.1:8000 cloud_storage.wsgi:application
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Start service:
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl start cloudstorage
-sudo systemctl enable cloudstorage
-```
-
-#### 7.6 Deploy Frontend
-
-```bash
-cd /var/www/simple-cloud-storage/frontend
-
-# Install and build
-npm install
-npm run build
-```
-
-#### 7.7 Configure Nginx
-
-```bash
-sudo nano /etc/nginx/sites-available/cloudstorage
-```
-
-Configuration:
-
-```nginx
-server {
-    listen 80;
-    server_name your_domain.com;
-
-    # Frontend static files
-    location / {
-        root /var/www/simple-cloud-storage/frontend/build;
-        try_files $uri $uri/ /index.html;
-    }
-
-    # API reverse proxy
-    location /api/ {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    }
-
-    # Django Admin
-    location /admin/ {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_set_header Host $host;
-    }
-
-    # Static files
-    location /static/ {
-        alias /var/www/simple-cloud-storage/staticfiles/;
-    }
-
-    # Media files
-    location /media/ {
-        alias /var/www/simple-cloud-storage/media/;
-    }
-}
-```
-
-Enable configuration:
-
-```bash
-sudo ln -s /etc/nginx/sites-available/cloudstorage /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl restart nginx
-```
-
-#### 7.8 Configure HTTPS (Recommended)
-
-```bash
-# Install Certbot
+# Ubuntu/Debian
 sudo apt install -y certbot python3-certbot-nginx
-
-# Get certificate
 sudo certbot --nginx -d your_domain.com
-
-# Auto renewal
-sudo systemctl enable certbot.timer
-```
-
-#### 7.9 Troubleshooting
-
-**Q: Port already in use?**
-```bash
-sudo lsof -i :8000
-sudo kill -9 <PID>
-```
-
-**Q: Cannot access static files?**
-```bash
-python manage.py collectstatic --noinput
-sudo chown -R www-data:www-data /var/www/simple-cloud-storage
-```
-
-**Q: Service fails to start?**
-```bash
-sudo systemctl status cloudstorage
-sudo journalctl -u cloudstorage -f
 ```
 
 ---
