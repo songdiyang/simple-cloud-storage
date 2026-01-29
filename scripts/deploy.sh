@@ -4,6 +4,7 @@
 # 简单云盘 - 一键部署脚本
 # Simple Cloud Storage - One-Click Deploy
 # 支持: Ubuntu/Debian/CentOS/RHEL/Fedora/Arch
+# 仅支持 Linux 系统 / Linux Only
 # ============================================
 
 set -e
@@ -15,6 +16,52 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m'
+
+# ============================================
+# 系统检查 - 仅支持 Linux
+# ============================================
+check_linux_only() {
+    case "$(uname -s)" in
+        Linux*)
+            return 0
+            ;;
+        Darwin*)
+            echo -e "${RED}============================================${NC}"
+            echo -e "${RED}  错误: 不支持 macOS 系统${NC}"
+            echo -e "${RED}  Error: macOS is not supported${NC}"
+            echo -e "${RED}============================================${NC}"
+            echo ""
+            echo -e "${YELLOW}此脚本仅支持 Linux 服务器部署。${NC}"
+            echo -e "${YELLOW}This script only supports Linux server deployment.${NC}"
+            echo ""
+            echo "建议 / Suggestion:"
+            echo "  - 使用 Ubuntu/Debian/CentOS 云服务器"
+            echo "  - Use Ubuntu/Debian/CentOS cloud server"
+            exit 1
+            ;;
+        MINGW*|CYGWIN*|MSYS*)
+            echo -e "${RED}============================================${NC}"
+            echo -e "${RED}  错误: 不支持 Windows 系统${NC}"
+            echo -e "${RED}  Error: Windows is not supported${NC}"
+            echo -e "${RED}============================================${NC}"
+            echo ""
+            echo -e "${YELLOW}此脚本仅支持 Linux 服务器部署。${NC}"
+            echo -e "${YELLOW}This script only supports Linux server deployment.${NC}"
+            echo ""
+            echo "建议 / Suggestion:"
+            echo "  - 使用 Ubuntu/Debian/CentOS 云服务器"
+            echo "  - 或使用 WSL2 (Windows Subsystem for Linux)"
+            exit 1
+            ;;
+        *)
+            echo -e "${RED}错误: 未知操作系统 / Unknown OS${NC}"
+            exit 1
+            ;;
+    esac
+}
+
+# 立即检查系统
+check_linux_only
 
 # 全局变量
 DEPLOY_DIR=""
@@ -441,51 +488,95 @@ EOF
     fi
 }
 
+# ============================================
+# 检查内存是否满足 Swift 要求
+# ============================================
+check_memory_for_swift() {
+    local mem_gb=$(free -g 2>/dev/null | awk '/^Mem:/{print $2}')
+    
+    if [ -z "$mem_gb" ] || [ "$mem_gb" -lt 4 ]; then
+        echo ""
+        echo -e "${RED}============================================${NC}"
+        echo -e "${RED}  内存不足 / Insufficient Memory${NC}"
+        echo -e "${RED}============================================${NC}"
+        echo ""
+        echo -e "${YELLOW}当前内存 / Current RAM: ${mem_gb:-<2}GB${NC}"
+        echo -e "${YELLOW}Swift 最低要求 / Swift minimum: 4GB${NC}"
+        echo -e "${YELLOW}DevStack 推荐 / DevStack recommended: 8GB+${NC}"
+        echo ""
+        echo -e "原因 / Reason:"
+        echo "  - DevStack 需要运行 MySQL, RabbitMQ, Keystone, Swift 等服务"
+        echo "  - 内存不足会导致安装失败或服务崩溃"
+        echo ""
+        echo -e "建议 / Suggestion:"
+        echo "  - 升级服务器到 4GB+ 内存"
+        echo "  - 或选择本地存储模式"
+        echo ""
+        return 1
+    fi
+    return 0
+}
+
 setup_swift() {
     step "配置存储后端 / Setting up storage..."
     
-    echo ""
-    echo "存储配置 / Storage Setup:"
-    echo "1) 自动安装 OpenStack DevStack + Swift（推荐）"
-    echo "2) 连接已有 OpenStack Swift"
-    echo "3) 使用本地存储 / Local storage"
-    echo "4) 跳过 / Skip"
-    read -p "选择 / Choose [1/2/3/4]: " swift_choice
-    
-    case "$swift_choice" in
-        1)
-            install_devstack
-            if [ $? -eq 0 ]; then
-                # 写入配置文件
+    while true; do
+        echo ""
+        echo "存储配置 / Storage Setup:"
+        echo "1) 自动安装 OpenStack DevStack + Swift（需要 4GB+ 内存）"
+        echo "2) 连接已有 OpenStack Swift"
+        echo "3) 使用本地存储 / Local storage（推荐小内存服务器）"
+        echo "4) 跳过 / Skip"
+        read -p "选择 / Choose [1/2/3/4]: " swift_choice
+        
+        case "$swift_choice" in
+            1)
+                # 检查内存
+                if ! check_memory_for_swift; then
+                    echo ""
+                    read -p "返回存储选择 / Return to storage selection [Enter]: "
+                    continue
+                fi
+                
+                install_devstack
+                if [ $? -eq 0 ]; then
+                    write_swift_config
+                fi
+                break
+                ;;
+            2)
+                read -p "Auth URL (http://host/identity/v3): " OS_AUTH_URL
+                read -p "Username: " OS_USERNAME
+                OS_PASSWORD=$(get_password "Password")
+                read -p "Project: " OS_PROJECT_NAME
+                read -p "User Domain [default]: " OS_USER_DOMAIN_ID
+                read -p "Project Domain [default]: " OS_PROJECT_DOMAIN_ID
+                read -p "Region [RegionOne]: " OS_REGION_NAME
+                
+                export OS_AUTH_URL OS_USERNAME OS_PASSWORD OS_PROJECT_NAME
+                export OS_USER_DOMAIN_ID=${OS_USER_DOMAIN_ID:-default}
+                export OS_PROJECT_DOMAIN_ID=${OS_PROJECT_DOMAIN_ID:-default}
+                export OS_REGION_NAME=${OS_REGION_NAME:-RegionOne}
+                export STORAGE_BACKEND="swift"
+                
                 write_swift_config
-            fi
-            ;;
-        2)
-            read -p "Auth URL (http://host/identity/v3): " OS_AUTH_URL
-            read -p "Username: " OS_USERNAME
-            OS_PASSWORD=$(get_password "Password")
-            read -p "Project: " OS_PROJECT_NAME
-            read -p "User Domain [default]: " OS_USER_DOMAIN_ID
-            read -p "Project Domain [default]: " OS_PROJECT_DOMAIN_ID
-            read -p "Region [RegionOne]: " OS_REGION_NAME
-            
-            export OS_AUTH_URL OS_USERNAME OS_PASSWORD OS_PROJECT_NAME
-            export OS_USER_DOMAIN_ID=${OS_USER_DOMAIN_ID:-default}
-            export OS_PROJECT_DOMAIN_ID=${OS_PROJECT_DOMAIN_ID:-default}
-            export OS_REGION_NAME=${OS_REGION_NAME:-RegionOne}
-            export STORAGE_BACKEND="swift"
-            
-            write_swift_config
-            success "Swift 配置完成 / Swift configured"
-            ;;
-        3)
-            export STORAGE_BACKEND="local"
-            success "使用本地存储 / Using local storage"
-            ;;
-        4)
-            warning "跳过存储配置 / Skipping storage"
-            ;;
-    esac
+                success "Swift 配置完成 / Swift configured"
+                break
+                ;;
+            3)
+                export STORAGE_BACKEND="local"
+                success "使用本地存储 / Using local storage"
+                break
+                ;;
+            4)
+                warning "跳过存储配置 / Skipping storage"
+                break
+                ;;
+            *)
+                warning "无效选择 / Invalid choice"
+                ;;
+        esac
+    done
 }
 
 # 写入 Swift 配置到项目
