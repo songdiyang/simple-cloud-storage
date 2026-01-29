@@ -59,76 +59,39 @@
 
 ---
 
-### 5. 本地部署步骤（仅代码，不包含演示数据）
+### 5. 本地部署
 
-#### 5.1 克隆代码
+#### 5.1 一键部署（推荐）
 
 ```bash
+# 克隆项目
 git clone https://github.com/songdiyang/simple-cloud-storage.git
-cd cloud-storage-system
-```
-
-#### 5.2 后端环境（Django + MySQL）
-
-1）创建虚拟环境并安装依赖：
-
-```bash
-python -m venv venv
+cd simple-cloud-storage
 
 # Windows
-venv\Scripts\activate
+scripts\setup_local.bat
 
 # Linux / macOS
-source venv/bin/activate
-
-pip install -r requirements.txt
+chmod +x scripts/setup_local.sh
+./scripts/setup_local.sh
 ```
 
-2）配置数据库（MySQL）：  
-- 默认在 `cloud_storage/settings.py` 中读取环境变量：
-  - `DB_NAME`（默认：`cloud_storage`）
-  - `DB_USER`（默认：`root`）
-  - `DB_PASSWORD`（默认：`3306`）
-  - `DB_HOST`（默认：`localhost`）
-  - `DB_PORT`（默认：`3306`）
+脚本自动完成：Python环境、数据库配置、依赖安装、管理员创建。
 
-请在 MySQL 中创建对应数据库，并按需修改环境变量或直接修改 `settings.py`。
-
-3）迁移数据库并创建超级用户：
+#### 5.2 启动服务
 
 ```bash
-python manage.py migrate
-python manage.py createsuperuser
+# 启动后端
+python manage.py runserver
+
+# 启动前端（新终端）
+cd frontend && npm start
 ```
 
-4）启动后端服务：
+#### 5.3 访问入口
 
-```bash
-python manage.py runserver 0.0.0.0:8000
-```
-
-#### 5.3 前端环境（React）
-
-```bash
-cd frontend
-npm install
-npm start
-```
-
-前端默认运行在 `http://localhost:3000`，`package.json` 中配置了：
-
-```json
-"proxy": "http://localhost:8000"
-```
-
-因此前端会自动把 `/api/...` 请求转发到后端。
-
-#### 5.4 访问入口
-
-- 登录页：`http://localhost:3000/login`
-- 用户首页 / 文件页：`http://localhost:3000/dashboard`
-- 分享访问：`http://localhost:3000/share/:shareCode`
-- Django 管理后台：`http://localhost:8000/admin`
+- 前端：`http://localhost:3000`
+- 后台：`http://localhost:8000/admin`
 
 ---
 
@@ -356,73 +319,37 @@ It supports file management, sharing, recycle bin, and an admin dashboard.
 
 ### 5. Local Setup
 
-#### 5.1 Clone the project
+#### 5.1 One-Click Setup (Recommended)
 
 ```bash
+# Clone project
 git clone https://github.com/songdiyang/simple-cloud-storage.git
-cd cloud-storage-system
-```
-
-#### 5.2 Backend (Django + MySQL)
-
-1) Create virtual env and install dependencies:
-
-```bash
-python -m venv venv
+cd simple-cloud-storage
 
 # Windows
-venv\Scripts\activate
+scripts\setup_local.bat
 
 # Linux / macOS
-source venv/bin/activate
-
-pip install -r requirements.txt
+chmod +x scripts/setup_local.sh
+./scripts/setup_local.sh
 ```
 
-2) Configure MySQL:  
-Database settings are read from environment variables in `cloud_storage/settings.py`:
+The script automatically handles: Python environment, database configuration, dependency installation, admin creation.
 
-- `DB_NAME` (default: `cloud_storage`)
-- `DB_USER` (default: `root`)
-- `DB_PASSWORD` (default: `3306`)
-- `DB_HOST` (default: `localhost`)
-- `DB_PORT` (default: `3306`)
-
-Create the database in MySQL and adjust env vars or `settings.py` if needed.
-
-3) Migrate and create superuser:
+#### 5.2 Start Services
 
 ```bash
-python manage.py migrate
-python manage.py createsuperuser
+# Start backend
+python manage.py runserver
+
+# Start frontend (new terminal)
+cd frontend && npm start
 ```
 
-4) Run backend:
+#### 5.3 Entry Points
 
-```bash
-python manage.py runserver 0.0.0.0:8000
-```
-
-#### 5.3 Frontend (React)
-
-```bash
-cd frontend
-npm install
-npm start
-```
-
-The frontend runs at `http://localhost:3000` and proxies API requests to `http://localhost:8000` via `package.json`:
-
-```json
-"proxy": "http://localhost:8000"
-```
-
-#### 5.4 Entry Points
-
-- Login: `http://localhost:3000/login`
-- User dashboard: `http://localhost:3000/dashboard`
-- Share view: `http://localhost:3000/share/:shareCode`
-- Django admin: `http://localhost:8000/admin`
+- Frontend: `http://localhost:3000`
+- Admin: `http://localhost:8000/admin`
 
 ---
 
