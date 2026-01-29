@@ -64,7 +64,7 @@
 #### 5.1 克隆代码
 
 ```bash
-git clone https://gitee.com/song-diyang/cloud-storage-system.git
+git clone https://github.com/songdiyang/simple-cloud-storage.git
 cd cloud-storage-system
 ```
 
@@ -517,7 +517,7 @@ It supports file management, sharing, recycle bin, and an admin dashboard.
 #### 5.1 Clone the project
 
 ```bash
-git clone https://gitee.com/song-diyang/cloud-storage-system.git
+git clone https://github.com/songdiyang/simple-cloud-storage.git
 cd cloud-storage-system
 ```
 
