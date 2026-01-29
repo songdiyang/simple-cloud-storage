@@ -153,6 +153,39 @@ chmod +x scripts/deploy.sh
 - 部署完成显示服务端口和访问地址
 - 中英文错误提示
 
+**部署成功示例**：
+
+```
+    ██████╗██╗      ██████╗ ██╗   ██╗██████╗ 
+   ██╔════╝██║     ██╔═══██╗██║   ██║██╔══██╗
+   ██║     ██║     ██║   ██║██║   ██║██║  ██║
+   ██║     ██║     ██║   ██║██║   ██║██║  ██║
+   ╚██████╗███████╗╚██████╔╝╚██████╔╝██████╔╝
+    ╚═════╝╚══════╝ ╚═════╝  ╚═════╝ ╚═════╝ 
+
+   ☁️  简单云盘部署成功 / Deploy Success  ☁️
+
+============================================
+  服务端口信息 / Service Ports
+============================================
+
+  后端 API     : 8000 (Gunicorn/Django)
+  前端 Web     : 80   (Nginx HTTP)
+  HTTPS        : 443  (Nginx HTTPS)
+  MySQL        : 3306 (Database)
+
+============================================
+  访问地址 / Access URLs
+============================================
+
+  前端 / Frontend:
+    http://192.168.1.100
+    https://example.com
+
+  后台 / Admin:
+    http://192.168.1.100/admin
+```
+
 #### 7.1 服务器要求
 
 - **操作系统**：Linux（不支持 Windows/macOS）
@@ -355,6 +388,39 @@ chmod +x scripts/deploy.sh
 - Configure Gunicorn backend service
 - Display service ports and access URLs after deployment
 - Bilingual error messages (English/Chinese)
+
+**Deployment Success Example**:
+
+```
+    ██████╗██╗      ██████╗ ██╗   ██╗██████╗ 
+   ██╔════╝██║     ██╔═══██╗██║   ██║██╔══██╗
+   ██║     ██║     ██║   ██║██║   ██║██║  ██║
+   ██║     ██║     ██║   ██║██║   ██║██║  ██║
+   ╚██████╗███████╗╚██████╔╝╚██████╔╝██████╔╝
+    ╚═════╝╚══════╝ ╚═════╝  ╚═════╝ ╚═════╝ 
+
+   ☁️  Deploy Success  ☁️
+
+============================================
+  Service Ports
+============================================
+
+  Backend API  : 8000 (Gunicorn/Django)
+  Frontend Web : 80   (Nginx HTTP)
+  HTTPS        : 443  (Nginx HTTPS)
+  MySQL        : 3306 (Database)
+
+============================================
+  Access URLs
+============================================
+
+  Frontend:
+    http://192.168.1.100
+    https://example.com
+
+  Admin:
+    http://192.168.1.100/admin
+```
 
 #### 7.1 Server Requirements
 
