@@ -213,6 +213,33 @@ swift list
 
 本节介绍如何将简单云盘部署到云服务器（如阿里云、腾讯云、AWS等）。
 
+#### 7.0 一键部署脚本（推荐）
+
+项目提供自动部署脚本，支持多种 Linux 发行版：
+
+**支持系统**：Ubuntu / Debian / CentOS / RHEL / Fedora / Arch / openSUSE / Alpine
+
+```bash
+# 克隆项目
+git clone https://github.com/songdiyang/simple-cloud-storage.git
+cd simple-cloud-storage
+
+# 运行一键部署
+chmod +x scripts/deploy.sh
+./scripts/deploy.sh
+```
+
+**脚本功能**：
+- 自动识别 Linux 发行版和包管理器
+- 交互式配置 MySQL 数据库
+- 交互式配置 OpenStack Swift（可选）
+- 自动部署前后端
+- 配置 Nginx 和 Gunicorn 服务
+- 支持禁用注册并手动创建管理员
+- 中英文错误提示
+
+如需手动部署，请参考以下步骤：
+
 #### 7.1 服务器要求
 
 - **操作系统**：Ubuntu 20.04+ / CentOS 7+ / Debian 10+
@@ -661,6 +688,33 @@ If both commands succeed, your Swift authentication is correctly configured.
 ### 7. Cloud Deployment Guide
 
 This section describes how to deploy Simple Cloud Storage to cloud servers (such as Aliyun, Tencent Cloud, AWS, etc.).
+
+#### 7.0 One-Click Deploy Script (Recommended)
+
+The project provides an automatic deployment script that supports multiple Linux distributions:
+
+**Supported OS**: Ubuntu / Debian / CentOS / RHEL / Fedora / Arch / openSUSE / Alpine
+
+```bash
+# Clone project
+git clone https://github.com/songdiyang/simple-cloud-storage.git
+cd simple-cloud-storage
+
+# Run one-click deploy
+chmod +x scripts/deploy.sh
+./scripts/deploy.sh
+```
+
+**Features**:
+- Auto-detect Linux distribution and package manager
+- Interactive MySQL database configuration
+- Interactive OpenStack Swift configuration (optional)
+- Auto deploy frontend and backend
+- Configure Nginx and Gunicorn services
+- Support disabling registration and manual admin creation
+- Bilingual error messages (English/Chinese)
+
+For manual deployment, please refer to the following steps:
 
 #### 7.1 Server Requirements
 
