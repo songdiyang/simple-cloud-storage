@@ -68,10 +68,7 @@
 git clone https://github.com/songdiyang/simple-cloud-storage.git
 cd simple-cloud-storage
 
-# Windows
-scripts\setup_local.bat
-
-# Linux / macOS
+# 运行部署脚本
 chmod +x scripts/setup_local.sh
 ./scripts/setup_local.sh
 ```
@@ -95,80 +92,34 @@ cd frontend && npm start
 
 ---
 
-### 6. OpenStack Swift 部署与连接（详细）
+### 6. OpenStack Swift 存储（可选）
 
-后端通过 `cloud_storage/settings.py` 中的 `SWIFT_CONFIG` 使用 OpenStack Swift。你需要准备好一个可用的 OpenStack 环境，并配置好认证信息。
+项目支持 OpenStack Swift 对象存储，也可使用本地存储。
 
-#### 6.1 前置条件
+#### 6.1 自动配置
 
-- 已部署好的 OpenStack（DevStack 或 生产环境）
-- 已安装并运行 Swift（Object Storage）服务
-- 拥有一个项目（Project / Project）和具备访问 Swift 权限的用户
+部署脚本已集成 Swift 配置，运行 `./scripts/deploy.sh` 时选择配置 Swift 即可。
 
-#### 6.2 在服务器上配置环境变量
+#### 6.2 环境变量
 
-在运行 Django 后端的服务器 / 容器中，设置以下环境变量（示例）：
+如需手动配置，设置以下环境变量：
 
 ```bash
-# Keystone 认证地址（注意 /v3）
-export OS_AUTH_URL=http://<YOUR_OPENSTACK_HOST>/identity/v3
-
-# 域配置（默认即可，不清楚就用 default）
-export OS_USER_DOMAIN_ID=default
-export OS_PROJECT_DOMAIN_ID=default
-
-# 认证用户信息
+export OS_AUTH_URL=http://<HOST>/identity/v3
 export OS_USERNAME=admin
 export OS_PASSWORD=your_password
 export OS_PROJECT_NAME=admin
-
-# 区域（和你 OpenStack 配置一致）
+export OS_USER_DOMAIN_ID=default
+export OS_PROJECT_DOMAIN_ID=default
 export OS_REGION_NAME=RegionOne
-
-# 可选：自签名证书的 CA 文件路径
-export OS_CACERT=
 ```
 
-`settings.py` 中的 `SWIFT_CONFIG` 会读取这些环境变量，无需修改代码：
-
-```python
-SWIFT_CONFIG = {
-    'auth_version': '3',
-    'auth_url': os.getenv('OS_AUTH_URL', 'http://.../identity/v3'),
-    'username': os.getenv('OS_USERNAME', 'admin'),
-    'password': os.getenv('OS_PASSWORD', 'devstack123'),
-    'project_name': os.getenv('OS_PROJECT_NAME', 'admin'),
-    'project_domain_id': os.getenv('OS_PROJECT_DOMAIN_ID', 'default'),
-    'user_domain_id': os.getenv('OS_USER_DOMAIN_ID', 'default'),
-    'region_name': os.getenv('OS_REGION_NAME', 'RegionOne'),
-    'cacert': os.getenv('OS_CACERT', None),
-}
-```
-
-#### 6.3 使用 python-swiftclient 测试连接（可选）
-
-在激活虚拟环境后执行：
+#### 6.3 验证连接
 
 ```bash
 swift stat
 swift list
 ```
-
-- `swift stat`：查看当前账号信息
-- `swift list`：列出所有容器
-
-如果命令返回正常数据，说明 Swift 认证配置正确。
-
-#### 6.4 容器与存储策略
-
-- 项目会为用户上传的文件创建对象，容器命名可以在代码中统一配置（例如：按用户分容器或统一容器 + 目录）。
-- 建议在 OpenStack 端开启：版本控制、生命周期（自动过期）、配额限制等策略，以便更好地控制成本和安全。
-
-#### 6.5 生产环境建议
-
-- 使用内网 / 专用子网访问 Swift，避免直接暴露存储节点到公网。
-- 对外下载链接建议走 Django + Nginx 反向代理，并做限速、鉴权、日志记录。
-- 对 Swift 操作添加监控（请求失败率、响应时间、存储容量告警等）。
 
 ---
 
@@ -326,10 +277,7 @@ It supports file management, sharing, recycle bin, and an admin dashboard.
 git clone https://github.com/songdiyang/simple-cloud-storage.git
 cd simple-cloud-storage
 
-# Windows
-scripts\setup_local.bat
-
-# Linux / macOS
+# Run setup script
 chmod +x scripts/setup_local.sh
 ./scripts/setup_local.sh
 ```
@@ -353,77 +301,34 @@ cd frontend && npm start
 
 ---
 
-### 6. OpenStack Swift Setup & Integration
+### 6. OpenStack Swift Storage (Optional)
 
-The backend uses the `SWIFT_CONFIG` section in `cloud_storage/settings.py` and environment variables to connect to Swift.
+The project supports OpenStack Swift object storage, or local storage.
 
-#### 6.1 Prerequisites
+#### 6.1 Auto Configuration
 
-- A running OpenStack environment (DevStack or production)
-- Swift (Object Storage) service installed and running
-- A project and a user with permission to access Swift
+Swift configuration is integrated in the deploy script. Run `./scripts/deploy.sh` and select Swift configuration.
 
 #### 6.2 Environment Variables
 
-Set the following env vars on the server where Django runs:
+For manual configuration, set the following:
 
 ```bash
-# Keystone endpoint (make sure /v3 is used)
-export OS_AUTH_URL=http://<YOUR_OPENSTACK_HOST>/identity/v3
-
-# Domains
-export OS_USER_DOMAIN_ID=default
-export OS_PROJECT_DOMAIN_ID=default
-
-# Credentials
+export OS_AUTH_URL=http://<HOST>/identity/v3
 export OS_USERNAME=admin
 export OS_PASSWORD=your_password
 export OS_PROJECT_NAME=admin
-
-# Region
+export OS_USER_DOMAIN_ID=default
+export OS_PROJECT_DOMAIN_ID=default
 export OS_REGION_NAME=RegionOne
-
-# Optional CA cert
-export OS_CACERT=
 ```
 
-These will be read by:
-
-```python
-SWIFT_CONFIG = {
-    'auth_version': '3',
-    'auth_url': os.getenv('OS_AUTH_URL', 'http://.../identity/v3'),
-    'username': os.getenv('OS_USERNAME', 'admin'),
-    'password': os.getenv('OS_PASSWORD', 'devstack123'),
-    'project_name': os.getenv('OS_PROJECT_NAME', 'admin'),
-    'project_domain_id': os.getenv('OS_PROJECT_DOMAIN_ID', 'default'),
-    'user_domain_id': os.getenv('OS_USER_DOMAIN_ID', 'default'),
-    'region_name': os.getenv('OS_REGION_NAME', 'RegionOne'),
-    'cacert': os.getenv('OS_CACERT', None),
-}
-```
-
-#### 6.3 Test Swift Connection (optional)
-
-With `python-swiftclient` installed, run:
+#### 6.3 Verify Connection
 
 ```bash
 swift stat
 swift list
 ```
-
-If both commands succeed, your Swift authentication is correctly configured.
-
-#### 6.4 Containers & Strategy
-
-- The project creates objects for uploaded files; you can use per-user containers or a shared container with folder prefixes.
-- On the OpenStack side, consider enabling lifecycle policies, versioning, and quotas.
-
-#### 6.5 Production Recommendations
-
-- Access Swift via internal networks or dedicated subnets.
-- Serve downloads through Django + Nginx (reverse proxy), with throttling, auth, and logging.
-- Add monitoring and alerts for Swift operations and capacity.
 
 ---
 
