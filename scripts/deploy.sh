@@ -470,37 +470,8 @@ main() {
     print_banner
     
     # 获取当前目录
-    local CURRENT_DIR=$(cd "$(dirname "$0")/.." && pwd)
-    local PROJECT_NAME=$(basename "$CURRENT_DIR")
-    local TARGET_DIR="/var/www/$PROJECT_NAME"
-    
-    # 检查是否在 /var/www
-    if [[ "$CURRENT_DIR" != /var/www/* ]]; then
-        echo ""
-        echo -e "${YELLOW}项目位置 / Project Location${NC}"
-        echo "当前: $CURRENT_DIR"
-        echo "目标: $TARGET_DIR"
-        echo ""
-        read -p "迁移到 /var/www? [y/n]: " move_choice
-        
-        if [[ "$move_choice" =~ ^[Yy]$ ]]; then
-            sudo mkdir -p /var/www
-            sudo mv "$CURRENT_DIR" "$TARGET_DIR"
-            sudo chown -R $(whoami):$(whoami) "$TARGET_DIR"
-            
-            success "已迁移到 / Moved to: $TARGET_DIR"
-            echo ""
-            echo "请重新执行 / Please run:"
-            echo "  cd $TARGET_DIR && ./scripts/deploy.sh"
-            exit 0
-        else
-            warning "已取消 / Cancelled"
-            exit 1
-        fi
-    fi
-    
-    DEPLOY_DIR="$CURRENT_DIR"
-    info "部署目录: $DEPLOY_DIR"
+    DEPLOY_DIR=$(cd "$(dirname "$0")/.." && pwd)
+    info "部署目录 / Deploy dir: $DEPLOY_DIR"
     
     # 检测系统
     detect_os
