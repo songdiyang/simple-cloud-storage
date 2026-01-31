@@ -148,8 +148,8 @@ chmod +x scripts/deploy.sh
 - 交互式配置 MySQL 数据库
 - 自动安装 OpenStack DevStack + Swift（需 4GB+ 内存）
 - 自动部署前后端
-- Nginx 配置：自动获取IP、支持多域名、自动申请SSL证书
 - 配置 Gunicorn 后台服务
+- Nginx 配置指南（用户自行配置）
 - 部署完成显示服务端口和访问地址
 - 中英文错误提示
 
@@ -170,19 +170,20 @@ chmod +x scripts/deploy.sh
 ============================================
 
   后端 API     : 8000 (Gunicorn/Django)
-  前端 Web     : 80   (Nginx HTTP)
-  HTTPS        : 443  (Nginx HTTPS)
   MySQL        : 3306 (Database)
 
 ============================================
   访问地址 / Access URLs
 ============================================
 
-  前端 / Frontend:
-    http://192.168.1.100
-    https://example.com
+  API 接口 / API:
+    http://192.168.1.100:8000/api/
 
-  后台 / Admin:
+  后台管理 / Admin:
+    http://192.168.1.100:8000/admin/
+
+  配置 Nginx 后可访问 / After Nginx setup:
+    http://192.168.1.100
     http://192.168.1.100/admin
 ```
 
@@ -384,8 +385,8 @@ chmod +x scripts/deploy.sh
 - Interactive MySQL database configuration
 - Auto install OpenStack DevStack + Swift (requires 4GB+ RAM)
 - Auto deploy frontend and backend
-- Nginx config: auto-detect IP, multi-domain support, auto SSL certificate
 - Configure Gunicorn backend service
+- Nginx configuration guide (manual setup)
 - Display service ports and access URLs after deployment
 - Bilingual error messages (English/Chinese)
 
@@ -406,19 +407,20 @@ chmod +x scripts/deploy.sh
 ============================================
 
   Backend API  : 8000 (Gunicorn/Django)
-  Frontend Web : 80   (Nginx HTTP)
-  HTTPS        : 443  (Nginx HTTPS)
   MySQL        : 3306 (Database)
 
 ============================================
   Access URLs
 ============================================
 
-  Frontend:
-    http://192.168.1.100
-    https://example.com
+  API:
+    http://192.168.1.100:8000/api/
 
   Admin:
+    http://192.168.1.100:8000/admin/
+
+  After Nginx setup:
+    http://192.168.1.100
     http://192.168.1.100/admin
 ```
 

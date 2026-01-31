@@ -728,173 +728,33 @@ get_host_ip() {
 # ============================================
 # 检查现有nginx配置
 # ============================================
-check_existing_nginx() {
-    local has_config=false
-    local configs=""
-    
-    # 检查sites-enabled
-    if [ -d "/etc/nginx/sites-enabled" ]; then
-        for f in /etc/nginx/sites-enabled/*; do
-            if [ -f "$f" ] && [ "$(basename $f)" != "cloudstorage" ]; then
-                has_config=true
-                configs="$configs $f"
-            fi
-        done
-    fi
-    
-    # 检查conf.d
-    if [ -d "/etc/nginx/conf.d" ]; then
-        for f in /etc/nginx/conf.d/*.conf; do
-            if [ -f "$f" ] && [ "$(basename $f)" != "cloudstorage.conf" ]; then
-                has_config=true
-                configs="$configs $f"
-            fi
-        done
-    fi
-    
-    if [ "$has_config" = true ]; then
-        echo ""
-        echo -e "${YELLOW}============================================${NC}"
-        echo -e "${YELLOW}  检测到现有 Nginx 配置 / Existing configs found${NC}"
-        echo -e "${YELLOW}============================================${NC}"
-        echo ""
-        echo "现有配置文件 / Existing config files:"
-        for f in $configs; do
-            echo "  - $f"
-        done
-        echo ""
-        
-        # 第一次询问
-        read -p "是否删除现有配置？/ Delete existing configs? [y/n]: " del_first
-        if [[ "$del_first" =~ ^[Yy]$ ]]; then
-            echo ""
-            echo -e "${RED}⚠️  警告 / WARNING ⚠️${NC}"
-            echo -e "${RED}此操作不可逆！删除后无法恢复！${NC}"
-            echo -e "${RED}This action is IRREVERSIBLE! Cannot be undone!${NC}"
-            echo ""
-            
-            # 第二次询问
-            read -p "确认删除？请输入 'DELETE' 确认 / Type 'DELETE' to confirm: " del_confirm
-            if [ "$del_confirm" = "DELETE" ]; then
-                for f in $configs; do
-                    sudo rm -f "$f"
-                    info "已删除 / Deleted: $f"
-                done
-                success "现有配置已删除 / Existing configs deleted"
-            else
-                warning "取消删除，保留现有配置 / Cancelled, keeping existing configs"
-            fi
-        fi
-    fi
-}
-
-# ============================================
-# 申请SSL证书
-# ============================================
-setup_ssl_certificate() {
-    local domains="$1"
-    
-    if [ -z "$domains" ]; then
-        warning "无域名，跳过SSL配置 / No domain, skipping SSL"
-        return 0
-    fi
-    
-    step "申请 SSL 证书 / Requesting SSL certificate..."
-    
-    # 安装 certbot
-    if ! command -v certbot &> /dev/null; then
-        info "安装 Certbot / Installing Certbot..."
-        case "$OS_TYPE" in
-            debian)
-                sudo $PKG_INSTALL certbot python3-certbot-nginx
-                ;;
-            rhel|fedora)
-                sudo $PKG_INSTALL certbot python3-certbot-nginx
-                ;;
-            arch)
-                sudo $PKG_INSTALL certbot certbot-nginx
-                ;;
-            *)
-                sudo $PKG_INSTALL certbot
-                ;;
-        esac
-    fi
-    
-    # 构建 certbot 域名参数
-    local domain_args=""
-    for d in $domains; do
-        domain_args="$domain_args -d $d"
-    done
-    
-    # 申请证书
-    info "正在申请证书 / Requesting certificate for: $domains"
-    sudo certbot --nginx $domain_args --non-interactive --agree-tos --register-unsafely-without-email
-    
-    if [ $? -eq 0 ]; then
-        success "SSL 证书申请成功 / SSL certificate obtained"
-        
-        # 启用自动续期
-        sudo systemctl enable certbot.timer 2>/dev/null || true
-        return 0
-    else
-        warning "SSL 证书申请失败，使用 HTTP / SSL failed, using HTTP"
-        return 1
-    fi
-}
-
 setup_nginx() {
-    step "配置 Nginx / Setting up Nginx..."
+    step "Nginx 配置指南 / Nginx Configuration Guide"
     
-    # 检查现有配置
-    check_existing_nginx
-    
-    # 自动获取主机IP
     local HOST_IP=$(get_host_ip)
-    echo ""
-    info "检测到主机IP / Detected IP: $HOST_IP"
-    
-    # 收集域名
-    local DOMAINS=""
-    local SERVER_NAMES="$HOST_IP"
     
     echo ""
-    echo "域名配置 / Domain Configuration:"
-    echo "可输入多个域名，每次输入一个，直接回车结束"
-    echo "Enter domains one by one, press Enter when done"
+    echo -e "${CYAN}============================================${NC}"
+    echo -e "${CYAN}  Nginx 配置指南 / Nginx Setup Guide${NC}"
+    echo -e "${CYAN}============================================${NC}"
     echo ""
-    
-    while true; do
-        read -p "输入域名 / Enter domain (回车结束/Enter to finish): " domain
-        if [ -z "$domain" ]; then
-            break
-        fi
-        DOMAINS="$DOMAINS $domain"
-        SERVER_NAMES="$SERVER_NAMES $domain"
-        info "已添加 / Added: $domain"
-    done
-    
-    # 去除前导空格
-    DOMAINS=$(echo $DOMAINS | xargs)
-    SERVER_NAMES=$(echo $SERVER_NAMES | xargs)
-    
-    info "服务器名称 / Server names: $SERVER_NAMES"
-    
-    # 确定配置文件位置
-    local nginx_conf=""
-    if [ -d "/etc/nginx/sites-available" ]; then
-        nginx_conf="/etc/nginx/sites-available/cloudstorage"
-    elif [ -d "/etc/nginx/conf.d" ]; then
-        nginx_conf="/etc/nginx/conf.d/cloudstorage.conf"
-    else
-        nginx_conf="/etc/nginx/nginx.conf.d/cloudstorage.conf"
-        sudo mkdir -p /etc/nginx/nginx.conf.d
-    fi
-    
-    # 写入配置
-    sudo tee $nginx_conf > /dev/null <<EOF
-server {
+    echo -e "${YELLOW}1. 安装 Nginx / Install Nginx:${NC}"
+    echo ""
+    echo "   # Ubuntu/Debian"
+    echo "   sudo apt install -y nginx"
+    echo ""
+    echo "   # CentOS/RHEL"
+    echo "   sudo yum install -y nginx"
+    echo ""
+    echo -e "${YELLOW}2. 创建配置文件 / Create config file:${NC}"
+    echo ""
+    echo "   sudo nano /etc/nginx/sites-available/cloudstorage"
+    echo ""
+    echo -e "${YELLOW}3. 配置内容 / Config content:${NC}"
+    echo ""
+    echo -e "${GREEN}server {
     listen 80;
-    server_name $SERVER_NAMES;
+    server_name $HOST_IP;  # 或你的域名
     client_max_body_size 100M;
 
     location / {
@@ -907,7 +767,6 @@ server {
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
     }
 
     location /admin/ {
@@ -922,48 +781,32 @@ server {
     location /media/ {
         alias $DEPLOY_DIR/media/;
     }
-}
-EOF
-
-    # 创建符号链接 (Debian系)
-    if [ -d "/etc/nginx/sites-enabled" ] && [ -f "/etc/nginx/sites-available/cloudstorage" ]; then
-        sudo ln -sf /etc/nginx/sites-available/cloudstorage /etc/nginx/sites-enabled/
-    fi
-    
-    # 检查配置
-    info "检查 Nginx 配置 / Checking Nginx config..."
-    sudo nginx -t
-    if [ $? -ne 0 ]; then
-        error "Nginx config error" "Nginx 配置错误"
-        error "Please check: $nginx_conf" "请检查: $nginx_conf"
-        return 1
-    fi
-    
-    # 重启 Nginx
-    service_restart nginx
-    success "Nginx 配置完成 / Nginx configured"
-    
-    # 如果有域名，申请SSL证书
-    if [ -n "$DOMAINS" ]; then
-        echo ""
-        read -p "是否申请 SSL 证书？/ Request SSL certificate? [y/n]: " ssl_choice
-        if [[ "$ssl_choice" =~ ^[Yy]$ ]]; then
-            setup_ssl_certificate "$DOMAINS"
-            
-            # 再次检查配置
-            info "重新检查 Nginx 配置 / Re-checking Nginx config..."
-            sudo nginx -t
-            if [ $? -eq 0 ]; then
-                service_restart nginx
-                success "HTTPS 配置完成 / HTTPS configured"
-            fi
-        fi
-    fi
+}${NC}"
+    echo ""
+    echo -e "${YELLOW}4. 启用配置 / Enable config:${NC}"
+    echo ""
+    echo "   # Ubuntu/Debian"
+    echo "   sudo ln -s /etc/nginx/sites-available/cloudstorage /etc/nginx/sites-enabled/"
+    echo "   sudo rm /etc/nginx/sites-enabled/default  # 可选"
+    echo ""
+    echo "   # CentOS/RHEL"
+    echo "   # 直接在 /etc/nginx/conf.d/ 下创建 .conf 文件"
+    echo ""
+    echo -e "${YELLOW}5. 检查并重启 / Test and restart:${NC}"
+    echo ""
+    echo "   sudo nginx -t"
+    echo "   sudo systemctl restart nginx"
+    echo ""
+    echo -e "${YELLOW}6. SSL 证书（可选）/ SSL certificate (optional):${NC}"
+    echo ""
+    echo "   sudo apt install -y certbot python3-certbot-nginx"
+    echo "   sudo certbot --nginx -d your_domain.com"
+    echo ""
+    echo -e "${CYAN}============================================${NC}"
+    echo ""
     
     # 保存配置信息
-    export NGINX_SERVER_NAMES="$SERVER_NAMES"
     export NGINX_HOST_IP="$HOST_IP"
-    export NGINX_DOMAINS="$DOMAINS"
 }
 
 # ============================================
@@ -1030,13 +873,6 @@ print_service_info() {
     echo -e "${CYAN}============================================${NC}"
     echo ""
     echo -e "  ${GREEN}后端 API${NC}     : 8000 (Gunicorn/Django)"
-    echo -e "  ${GREEN}前端 Web${NC}     : 80   (Nginx HTTP)"
-    
-    # 如果配置了SSL
-    if [ -n "$NGINX_DOMAINS" ]; then
-        echo -e "  ${GREEN}HTTPS${NC}        : 443  (Nginx HTTPS)"
-    fi
-    
     echo -e "  ${GREEN}MySQL${NC}        : 3306 (Database)"
     
     # 如果配置了Swift
@@ -1053,29 +889,17 @@ print_service_info() {
     
     local host_ip=${NGINX_HOST_IP:-$(hostname -I | awk '{print $1}')}
     
-    # HTTP 访问
-    echo -e "  ${GREEN}前端 / Frontend${NC}:"
-    echo "    http://$host_ip"
-    
-    # 如果有域名
-    if [ -n "$NGINX_DOMAINS" ]; then
-        for d in $NGINX_DOMAINS; do
-            echo "    https://$d"
-        done
-    fi
-    
-    echo ""
-    echo -e "  ${GREEN}后台 / Admin${NC}:"
-    echo "    http://$host_ip/admin"
-    
-    if [ -n "$NGINX_DOMAINS" ]; then
-        local first_domain=$(echo $NGINX_DOMAINS | awk '{print $1}')
-        echo "    https://$first_domain/admin"
-    fi
-    
-    echo ""
     echo -e "  ${GREEN}API 接口 / API${NC}:"
-    echo "    http://$host_ip/api/"
+    echo "    http://$host_ip:8000/api/"
+    
+    echo ""
+    echo -e "  ${GREEN}后台管理 / Admin${NC}:"
+    echo "    http://$host_ip:8000/admin/"
+    
+    echo ""
+    echo -e "  ${YELLOW}配置 Nginx 后可访问 / After Nginx setup:${NC}"
+    echo "    http://$host_ip"
+    echo "    http://$host_ip/admin"
     
     echo ""
 }
