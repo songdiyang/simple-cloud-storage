@@ -149,7 +149,6 @@ chmod +x scripts/deploy.sh
 - 自动安装 OpenStack DevStack + Swift（需 4GB+ 内存）
 - 自动部署前后端
 - 配置 Gunicorn 后台服务
-- Nginx 配置指南（用户自行配置）
 - 部署完成显示服务端口和访问地址
 - 中英文错误提示
 
@@ -181,10 +180,6 @@ chmod +x scripts/deploy.sh
 
   后台管理 / Admin:
     http://<服务器公网IP>:8000/admin/
-
-  配置 Nginx 后可访问 / After Nginx setup:
-    http://<服务器公网IP>
-    http://<服务器公网IP>/admin
 ```
 
 #### 7.1 服务器要求
@@ -192,7 +187,7 @@ chmod +x scripts/deploy.sh
 - **操作系统**：Linux（不支持 Windows/macOS）
 - **最低配置**：2核 CPU、2GB 内存、20GB 硬盘
 - **Swift 配置**：需 4GB+ 内存
-- **开放端口**：80、44、8000、3306
+- **开放端口**：8000、3306
 
 #### 7.2 部署后更新
 
@@ -386,7 +381,6 @@ chmod +x scripts/deploy.sh
 - Auto install OpenStack DevStack + Swift (requires 4GB+ RAM)
 - Auto deploy frontend and backend
 - Configure Gunicorn backend service
-- Nginx configuration guide (manual setup)
 - Display service ports and access URLs after deployment
 - Bilingual error messages (English/Chinese)
 
@@ -418,10 +412,6 @@ chmod +x scripts/deploy.sh
 
   Admin:
     http://<your_public_ip>:8000/admin/
-
-  After Nginx setup:
-    http://<your_public_ip>
-    http://<your_public_ip>/admin
 ```
 
 #### 7.1 Server Requirements
@@ -429,7 +419,7 @@ chmod +x scripts/deploy.sh
 - **OS**: Linux only (Windows/macOS not supported)
 - **Minimum**: 2 CPU cores, 2GB RAM, 20GB disk
 - **Swift**: Requires 4GB+ RAM
-- **Open Ports**: 80, 443, 8000, 3306
+- **Open Ports**: 8000, 3306
 
 #### 7.2 Update After Deployment
 

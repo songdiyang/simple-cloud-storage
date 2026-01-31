@@ -803,9 +803,6 @@ deploy_frontend() {
 }
 
 # ============================================
-# 配置 Nginx
-# ============================================
-# ============================================
 # 获取主机IP
 # ============================================
 get_host_ip() {
@@ -817,90 +814,6 @@ get_host_ip() {
         ip="127.0.0.1"
     fi
     echo "$ip"
-}
-
-# ============================================
-# 检查现有nginx配置
-# ============================================
-setup_nginx() {
-    step "Nginx 配置指南 / Nginx Configuration Guide"
-    
-    local HOST_IP=$(get_host_ip)
-    
-    echo ""
-    echo -e "${CYAN}============================================${NC}"
-    echo -e "${CYAN}  Nginx 配置指南 / Nginx Setup Guide${NC}"
-    echo -e "${CYAN}============================================${NC}"
-    echo ""
-    echo -e "${YELLOW}1. 安装 Nginx / Install Nginx:${NC}"
-    echo ""
-    echo "   # Ubuntu/Debian"
-    echo "   sudo apt install -y nginx"
-    echo ""
-    echo "   # CentOS/RHEL"
-    echo "   sudo yum install -y nginx"
-    echo ""
-    echo -e "${YELLOW}2. 创建配置文件 / Create config file:${NC}"
-    echo ""
-    echo "   sudo nano /etc/nginx/sites-available/cloudstorage"
-    echo ""
-    echo -e "${YELLOW}3. 配置内容 / Config content:${NC}"
-    echo ""
-    echo -e "${GREEN}server {
-    listen 80;
-    server_name $HOST_IP;  # 或你的域名
-    client_max_body_size 100M;
-
-    location / {
-        root $DEPLOY_DIR/frontend/build;
-        try_files \$uri \$uri/ /index.html;
-    }
-
-    location /api/ {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-    }
-
-    location /admin/ {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_set_header Host \$host;
-    }
-
-    location /static/ {
-        alias $DEPLOY_DIR/staticfiles/;
-    }
-
-    location /media/ {
-        alias $DEPLOY_DIR/media/;
-    }
-}${NC}"
-    echo ""
-    echo -e "${YELLOW}4. 启用配置 / Enable config:${NC}"
-    echo ""
-    echo "   # Ubuntu/Debian"
-    echo "   sudo ln -s /etc/nginx/sites-available/cloudstorage /etc/nginx/sites-enabled/"
-    echo "   sudo rm /etc/nginx/sites-enabled/default  # 可选"
-    echo ""
-    echo "   # CentOS/RHEL"
-    echo "   # 直接在 /etc/nginx/conf.d/ 下创建 .conf 文件"
-    echo ""
-    echo -e "${YELLOW}5. 检查并重启 / Test and restart:${NC}"
-    echo ""
-    echo "   sudo nginx -t"
-    echo "   sudo systemctl restart nginx"
-    echo ""
-    echo -e "${YELLOW}6. SSL 证书（可选）/ SSL certificate (optional):${NC}"
-    echo ""
-    echo "   sudo apt install -y certbot python3-certbot-nginx"
-    echo "   sudo certbot --nginx -d your_domain.com"
-    echo ""
-    echo -e "${CYAN}============================================${NC}"
-    echo ""
-    
-    # 保存配置信息
-    export NGINX_HOST_IP="$HOST_IP"
 }
 
 # ============================================
@@ -981,7 +894,7 @@ print_service_info() {
     echo -e "${CYAN}============================================${NC}"
     echo ""
     
-    local host_ip=${NGINX_HOST_IP:-$(hostname -I | awk '{print $1}')}
+    local host_ip=$(get_host_ip)
     
     echo -e "  ${GREEN}API 接口 / API${NC}:"
     echo "    http://$host_ip:8000/api/"
@@ -989,11 +902,6 @@ print_service_info() {
     echo ""
     echo -e "  ${GREEN}后台管理 / Admin${NC}:"
     echo "    http://$host_ip:8000/admin/"
-    
-    echo ""
-    echo -e "  ${YELLOW}配置 Nginx 后可访问 / After Nginx setup:${NC}"
-    echo "    http://$host_ip"
-    echo "    http://$host_ip/admin"
     
     echo ""
 }
@@ -1052,18 +960,10 @@ main() {
     # 检测系统
     detect_os
     
-    # 安装依赖（含 Nginx）
+    # 安装依赖
     echo ""
     read -p "安装系统依赖? / Install dependencies? [y/n]: " install_deps
     [[ "$install_deps" =~ ^[Yy]$ ]] && install_packages
-    
-    # Nginx 配置指南（优先配置）
-    echo ""
-    echo -e "${CYAN}Nginx 配置 / Nginx Configuration${NC}"
-    echo "云端部署建议先配置 Nginx"
-    echo "Recommended to configure Nginx first for cloud deployment"
-    read -p "查看 Nginx 配置指南? [y/n]: " setup_ng
-    [[ "$setup_ng" =~ ^[Yy]$ ]] && setup_nginx
     
     # 配置数据库
     echo ""
