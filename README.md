@@ -165,21 +165,14 @@ chmod +x scripts/deploy.sh
    ☁️  简单云盘部署成功 / Deploy Success  ☁️
 
 ============================================
-  服务端口信息 / Service Ports
+  访问地址 / Access URL
 ============================================
 
-  后端 API     : 8000 (Gunicorn/Django)
-  MySQL        : 3306 (Database)
+  云存储服务 / Cloud Storage:
+    http://<服务器IP>:8000/
 
-============================================
-  访问地址 / Access URLs
-============================================
-
-  API 接口 / API:
-    http://<服务器公网IP>:8000/api/
-
-  后台管理 / Admin:
-    http://<服务器公网IP>:8000/admin/
+  管理后台 / Admin:
+    http://<服务器IP>:8000/admin/
 ```
 
 #### 7.1 服务器要求
@@ -397,21 +390,14 @@ chmod +x scripts/deploy.sh
    ☁️  Deploy Success  ☁️
 
 ============================================
-  Service Ports
+  Access URL
 ============================================
 
-  Backend API  : 8000 (Gunicorn/Django)
-  MySQL        : 3306 (Database)
-
-============================================
-  Access URLs
-============================================
-
-  API:
-    http://<your_public_ip>:8000/api/
+  Cloud Storage:
+    http://<your_server_ip>:8000/
 
   Admin:
-    http://<your_public_ip>:8000/admin/
+    http://<your_server_ip>:8000/admin/
 ```
 
 #### 7.1 Server Requirements
