@@ -269,10 +269,15 @@ setup_storage() {
             ;;
         2)
             local mem_gb=$(free -g | awk '/^Mem:/{print $2}')
+            if [ "${mem_gb:-0}" -lt 2 ]; then
+                error "内存不足 2GB，无法安装 Swift / Less than 2GB RAM, cannot install Swift"
+                echo "当前内存 / Current RAM: ${mem_gb:-0}GB"
+                echo "最低要求 / Minimum: 2GB"
+                return
+            fi
+            
             if [ "${mem_gb:-0}" -lt 4 ]; then
-                warning "内存不足4GB，Swift可能失败 / Less than 4GB RAM"
-                read -p "继续? [y/n]: " continue_swift
-                [[ ! "$continue_swift" =~ ^[Yy]$ ]] && return
+                warning "内存低于 4GB，Swift 可能不稳定 / Less than 4GB RAM, Swift may be unstable"
             fi
             
             info "安装 DevStack + Swift..."
