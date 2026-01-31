@@ -1024,9 +1024,9 @@ main() {
         if [[ "$move_choice" =~ ^[Yy]$ ]]; then
             info "迁移项目到 /var/www / Moving project..."
             
-            # 创建目录并迁移
+            # 创建目录并迁移（剪切）
             sudo mkdir -p /var/www
-            sudo cp -r "$CURRENT_DIR" "$TARGET_DIR"
+            sudo mv "$CURRENT_DIR" "$TARGET_DIR"
             sudo chown -R $(whoami):$(whoami) "$TARGET_DIR"
             
             success "项目已迁移到 / Project moved to: $TARGET_DIR"
