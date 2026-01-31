@@ -68,12 +68,23 @@
 git clone https://github.com/songdiyang/simple-cloud-storage.git
 cd simple-cloud-storage
 
-# 运行部署脚本
-chmod +x scripts/setup_local.sh
-./scripts/setup_local.sh
-```
+# 创建虚拟环境
+python3 -m venv venv
+source venv/bin/activate
 
-脚本自动完成：Python环境、数据库配置、依赖安装、管理员创建。
+# 安装依赖
+pip install -r requirements.txt
+
+# 配置环境变量
+cp .env.example .env
+nano .env  # 编辑数据库配置
+
+# 数据库迁移
+python manage.py migrate
+
+# 创建管理员
+python manage.py createsuperuser
+```
 
 #### 5.2 启动服务
 
@@ -347,19 +358,30 @@ It supports file management, sharing, recycle bin, and an admin dashboard.
 
 ### 5. Local Setup
 
-#### 5.1 One-Click Setup (Recommended)
+#### 5.1 Setup Steps
 
 ```bash
 # Clone project
 git clone https://github.com/songdiyang/simple-cloud-storage.git
 cd simple-cloud-storage
 
-# Run setup script
-chmod +x scripts/setup_local.sh
-./scripts/setup_local.sh
-```
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate
 
-The script automatically handles: Python environment, database configuration, dependency installation, admin creation.
+# Install dependencies
+pip install -r requirements.txt
+
+# Configure environment
+cp .env.example .env
+nano .env  # Edit database configuration
+
+# Database migration
+python manage.py migrate
+
+# Create admin user
+python manage.py createsuperuser
+```
 
 #### 5.2 Start Services
 
