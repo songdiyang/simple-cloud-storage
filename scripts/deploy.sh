@@ -624,10 +624,11 @@ deploy_backend() {
     fi
     source venv/bin/activate
     
-    # 安装依赖
-    pip install --upgrade pip
-    pip install -r requirements.txt
-    pip install gunicorn mysqlclient
+    # 轻量化安装依赖（避免编译，优先使用预编译包）
+    info "安装 Python 依赖 / Installing Python dependencies..."
+    pip install --upgrade pip --quiet
+    pip install --prefer-binary -r requirements.txt 2>&1 | tail -3
+    pip install --prefer-binary gunicorn mysqlclient 2>&1 | tail -2
     
     # 生成密钥
     export SECRET_KEY=$(python3 -c "import secrets; print(secrets.token_urlsafe(50))")
@@ -685,6 +686,37 @@ EOF
 }
 
 # ============================================
+# 添加 Swap 空间（小内存服务器）
+# ============================================
+setup_swap() {
+    local swap_size=$1  # GB
+    
+    # 检查是否已有swap
+    local current_swap=$(free -g | awk '/^Swap:/{print $2}')
+    if [ "$current_swap" -ge 2 ]; then
+        info "Swap 已存在: ${current_swap}GB"
+        return 0
+    fi
+    
+    info "创建 ${swap_size}GB Swap 空间..."
+    
+    # 创建swap文件
+    sudo fallocate -l ${swap_size}G /swapfile 2>/dev/null || \
+    sudo dd if=/dev/zero of=/swapfile bs=1M count=$((swap_size * 1024)) status=progress
+    
+    sudo chmod 600 /swapfile
+    sudo mkswap /swapfile
+    sudo swapon /swapfile
+    
+    # 持久化
+    if ! grep -q '/swapfile' /etc/fstab; then
+        echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+    fi
+    
+    success "Swap 已启用 / Swap enabled"
+}
+
+# ============================================
 # 部署前端
 # ============================================
 deploy_frontend() {
@@ -692,15 +724,77 @@ deploy_frontend() {
     
     cd "$DEPLOY_DIR/frontend"
     
-    npm install
+    # 检查内存
+    local mem_gb=$(free -g | awk '/^Mem:/{print $2}')
+    
+    # 如果已有build目录，跳过构建
+    if [ -d "build" ] && [ -f "build/index.html" ]; then
+        echo ""
+        echo -e "${GREEN}检测到已构建的前端 / Existing build detected${NC}"
+        read -p "使用现有构建? / Use existing build? [Y/n]: " use_existing
+        if [[ ! "$use_existing" =~ ^[Nn]$ ]]; then
+            cd "$DEPLOY_DIR"
+            success "使用现有前端构建 / Using existing build"
+            return 0
+        fi
+    fi
+    
+    # 小内存服务器警告
+    if [ "$mem_gb" -lt 2 ]; then
+        echo ""
+        echo -e "${RED}============================================${NC}"
+        echo -e "${RED}  内存警告 / Memory Warning${NC}"
+        echo -e "${RED}============================================${NC}"
+        echo ""
+        echo -e "${YELLOW}当前内存 / Current RAM: ${mem_gb}GB${NC}"
+        echo -e "${YELLOW}前端构建需要 / Frontend build requires: 2GB+${NC}"
+        echo ""
+        echo "建议 / Suggestions:"
+        echo "  1) 在本地构建后上传 build 目录"
+        echo "     Build locally, then upload 'frontend/build' folder"
+        echo ""
+        echo "  2) 添加 Swap 空间后继续"
+        echo "     Add swap space and continue"
+        echo ""
+        
+        read -p "选择 / Choose [1=跳过/skip, 2=添加swap]: " mem_choice
+        
+        case "$mem_choice" in
+            1)
+                warning "跳过前端构建 / Skipping frontend build"
+                echo "请手动上传 build 目录到: $DEPLOY_DIR/frontend/build"
+                cd "$DEPLOY_DIR"
+                return 0
+                ;;
+            2)
+                setup_swap 2
+                ;;
+            *)
+                warning "跳过前端构建 / Skipping frontend build"
+                cd "$DEPLOY_DIR"
+                return 0
+                ;;
+        esac
+    fi
+    
+    # 限制 Node.js 内存使用
+    export NODE_OPTIONS="--max-old-space-size=512"
+    
+    info "安装依赖 / Installing dependencies..."
+    npm install --no-audit --no-fund 2>&1 | tail -5
     if [ $? -ne 0 ]; then
         error "npm install failed" "npm 安装失败"
+        cd "$DEPLOY_DIR"
         return 1
     fi
     
-    npm run build
+    info "构建前端 / Building frontend..."
+    npm run build 2>&1 | tail -10
     if [ $? -ne 0 ]; then
         error "npm build failed" "前端构建失败"
+        echo ""
+        echo -e "${YELLOW}建议: 在本地构建后上传 build 目录${NC}"
+        cd "$DEPLOY_DIR"
         return 1
     fi
     
