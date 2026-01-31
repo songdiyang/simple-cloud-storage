@@ -96,13 +96,9 @@ cd frontend && npm start
 
 项目支持 OpenStack Swift 对象存储，也可使用本地存储。
 
-#### 6.1 自动配置
+#### 6.1 环境变量
 
-部署脚本已集成 Swift 配置，运行 `./scripts/deploy.sh` 时选择配置 Swift 即可。
-
-#### 6.2 环境变量
-
-如需手动配置，设置以下环境变量：
+如需配置 Swift，设置以下环境变量：
 
 ```bash
 export OS_AUTH_URL=http://<HOST>/identity/v3
@@ -141,7 +137,7 @@ sudo apt update
 sudo apt install -y nginx mysql-server python3 python3-pip python3-venv git curl
 
 # 安装 Node.js
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
 sudo apt install -y nodejs
 ```
 
@@ -254,17 +250,6 @@ gunicorn cloud_storage.wsgi:application --bind 0.0.0.0:8000 --daemon
 ```
 
 访问 `http://你的IP/` 即可使用。
-
-#### 7.8 本地快速部署（可选）
-
-如果只是本地测试，可使用快速部署脚本：
-
-```bash
-chmod +x scripts/deploy.sh
-./scripts/deploy.sh
-```
-
-访问 `http://服务器IP:8000/`
 
 ---
 
@@ -397,13 +382,9 @@ cd frontend && npm start
 
 The project supports OpenStack Swift object storage, or local storage.
 
-#### 6.1 Auto Configuration
+#### 6.1 Environment Variables
 
-Swift configuration is integrated in the deploy script. Run `./scripts/deploy.sh` and select Swift configuration.
-
-#### 6.2 Environment Variables
-
-For manual configuration, set the following:
+To configure Swift, set the following:
 
 ```bash
 export OS_AUTH_URL=http://<HOST>/identity/v3
@@ -415,7 +396,7 @@ export OS_PROJECT_DOMAIN_ID=default
 export OS_REGION_NAME=RegionOne
 ```
 
-#### 6.3 Verify Connection
+#### 6.2 Verify Connection
 
 ```bash
 swift stat
@@ -442,7 +423,7 @@ sudo apt update
 sudo apt install -y nginx mysql-server python3 python3-pip python3-venv git curl
 
 # Install Node.js
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
 sudo apt install -y nodejs
 ```
 
@@ -555,17 +536,6 @@ gunicorn cloud_storage.wsgi:application --bind 0.0.0.0:8000 --daemon
 ```
 
 Access `http://your_ip/` to use.
-
-#### 7.8 Local Quick Deploy (Optional)
-
-For local testing only, use the quick deploy script:
-
-```bash
-chmod +x scripts/deploy.sh
-./scripts/deploy.sh
-```
-
-Access `http://server_ip:8000/`
 
 ---
 
