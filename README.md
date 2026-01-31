@@ -177,14 +177,14 @@ chmod +x scripts/deploy.sh
 ============================================
 
   API 接口 / API:
-    http://192.168.1.100:8000/api/
+    http://<服务器公网IP>:8000/api/
 
   后台管理 / Admin:
-    http://192.168.1.100:8000/admin/
+    http://<服务器公网IP>:8000/admin/
 
   配置 Nginx 后可访问 / After Nginx setup:
-    http://192.168.1.100
-    http://192.168.1.100/admin
+    http://<服务器公网IP>
+    http://<服务器公网IP>/admin
 ```
 
 #### 7.1 服务器要求
@@ -414,14 +414,14 @@ chmod +x scripts/deploy.sh
 ============================================
 
   API:
-    http://192.168.1.100:8000/api/
+    http://<your_public_ip>:8000/api/
 
   Admin:
-    http://192.168.1.100:8000/admin/
+    http://<your_public_ip>:8000/admin/
 
   After Nginx setup:
-    http://192.168.1.100
-    http://192.168.1.100/admin
+    http://<your_public_ip>
+    http://<your_public_ip>/admin
 ```
 
 #### 7.1 Server Requirements
