@@ -1011,10 +1011,18 @@ main() {
     # 检测系统
     detect_os
     
-    # 安装依赖
+    # 安装依赖（含 Nginx）
     echo ""
     read -p "安装系统依赖? / Install dependencies? [y/n]: " install_deps
     [[ "$install_deps" =~ ^[Yy]$ ]] && install_packages
+    
+    # Nginx 配置指南（优先配置）
+    echo ""
+    echo -e "${CYAN}Nginx 配置 / Nginx Configuration${NC}"
+    echo "云端部署建议先配置 Nginx"
+    echo "Recommended to configure Nginx first for cloud deployment"
+    read -p "查看 Nginx 配置指南? [y/n]: " setup_ng
+    [[ "$setup_ng" =~ ^[Yy]$ ]] && setup_nginx
     
     # 配置数据库
     echo ""
@@ -1035,14 +1043,6 @@ main() {
     # 部署前端
     echo ""
     deploy_frontend || exit 1
-    
-    # 配置 Nginx（云端部署）
-    echo ""
-    echo -e "${CYAN}Nginx 配置 / Nginx Configuration${NC}"
-    echo "云端部署建议配置 Nginx，本地开发可跳过"
-    echo "Recommended for cloud deployment, skip for local dev"
-    read -p "配置 Nginx? [y/n]: " setup_ng
-    [[ "$setup_ng" =~ ^[Yy]$ ]] && setup_nginx
     
     # 配置 Gunicorn
     echo ""
