@@ -127,68 +127,144 @@ swift list
 
 本节介绍如何将简单云盘部署到云服务器（如阿里云、腾讯云、AWS等）。
 
-#### 7.0 一键部署脚本（推荐）
+#### 7.0 服务器要求
 
-项目提供自动部署脚本，支持多种 Linux 发行版：
+- **操作系统**：Linux（Ubuntu/Debian/CentOS）
+- **最低配置**：2核 CPU、2GB 内存、20GB 硬盘
+- **Swift 存储**：需 4GB+ 内存
 
-**支持系统**：Ubuntu / Debian / CentOS / RHEL / Fedora / Arch / openSUSE / Alpine
+#### 7.1 安装依赖
 
 ```bash
-# 克隆项目
-git clone https://github.com/songdiyang/simple-cloud-storage.git
-cd simple-cloud-storage
+# Ubuntu/Debian
+sudo apt update
+sudo apt install -y nginx mysql-server python3 python3-pip python3-venv git curl
 
-# 运行一键部署
+# 安装 Node.js
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt install -y nodejs
+```
+
+#### 7.2 克隆项目
+
+```bash
+cd /var/www
+sudo git clone https://github.com/songdiyang/simple-cloud-storage.git
+sudo chown -R $USER:$USER simple-cloud-storage
+cd simple-cloud-storage
+```
+
+#### 7.3 配置数据库
+
+```bash
+# 启动 MySQL
+sudo systemctl start mysql
+sudo systemctl enable mysql
+
+# 创建数据库和用户
+sudo mysql -e "CREATE DATABASE cloud_storage CHARACTER SET utf8mb4;"
+sudo mysql -e "CREATE USER 'cloud_user'@'localhost' IDENTIFIED BY '你的密码';"
+sudo mysql -e "GRANT ALL PRIVILEGES ON cloud_storage.* TO 'cloud_user'@'localhost';"
+sudo mysql -e "FLUSH PRIVILEGES;"
+```
+
+#### 7.4 配置后端
+
+```bash
+# 创建环境配置
+cp .env.example .env
+nano .env  # 编辑数据库配置
+
+# 创建虚拟环境
+python3 -m venv venv
+source venv/bin/activate
+
+# 安装依赖
+pip install -r requirements.txt
+
+# 数据库迁移
+python manage.py migrate
+
+# 创建管理员
+python manage.py createsuperuser
+
+# 收集静态文件
+python manage.py collectstatic --noinput
+```
+
+#### 7.5 配置前端
+
+```bash
+cd frontend
+npm install
+npm run build
+cd ..
+```
+
+#### 7.6 配置 Nginx
+
+```bash
+sudo nano /etc/nginx/sites-available/cloudstorage
+```
+
+配置内容（端口号自定义）：
+
+```nginx
+server {
+    listen 80;  # 自定义端口
+    server_name 你的域名或IP;
+    client_max_body_size 100M;
+
+    location / {
+        root /var/www/simple-cloud-storage/frontend/build;
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    location /admin/ {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+    }
+
+    location /static/ {
+        alias /var/www/simple-cloud-storage/staticfiles/;
+    }
+}
+```
+
+```bash
+# 启用配置
+sudo ln -s /etc/nginx/sites-available/cloudstorage /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl restart nginx
+```
+
+#### 7.7 启动服务
+
+```bash
+# 启动后端服务
+cd /var/www/simple-cloud-storage
+source venv/bin/activate
+gunicorn cloud_storage.wsgi:application --bind 0.0.0.0:8000 --daemon
+```
+
+访问 `http://你的IP/` 即可使用。
+
+#### 7.8 本地快速部署（可选）
+
+如果只是本地测试，可使用快速部署脚本：
+
+```bash
 chmod +x scripts/deploy.sh
 ./scripts/deploy.sh
 ```
 
-**脚本功能**：
-- 自动识别 Linux 发行版和包管理器
-- 交互式配置 MySQL 数据库
-- 自动安装 OpenStack DevStack + Swift（需 4GB+ 内存）
-- 自动部署前后端
-- 配置 Gunicorn 后台服务
-- 部署完成显示服务端口和访问地址
-- 中英文错误提示
-
-**部署成功示例**：
-
-```
-    ██████╗██╗      ██████╗ ██╗   ██╗██████╗ 
-   ██╔════╝██║     ██╔═══██╗██║   ██║██╔══██╗
-   ██║     ██║     ██║   ██║██║   ██║██║  ██║
-   ██║     ██║     ██║   ██║██║   ██║██║  ██║
-   ╚██████╗███████╗╚██████╔╝╚██████╔╝██████╔╝
-    ╚═════╝╚══════╝ ╚═════╝  ╚═════╝ ╚═════╝ 
-
-   ☁️  简单云盘部署成功 / Deploy Success  ☁️
-
-============================================
-  访问地址 / Access URL
-============================================
-
-  云存储服务 / Cloud Storage:
-    http://<服务器IP>:8000/
-
-  管理后台 / Admin:
-    http://<服务器IP>:8000/admin/
-```
-
-#### 7.1 服务器要求
-
-- **操作系统**：Linux（不支持 Windows/macOS）
-- **最低配置**：2核 CPU、2GB 内存、20GB 硬盘
-- **Swift 配置**：需 4GB+ 内存
-- **开放端口**：8000、3306
-
-#### 7.2 部署后更新
-
-```bash
-cd /var/www/simple-cloud-storage
-git pull origin main
-./scripts/deploy.sh
-```
+访问 `http://服务器IP:8000/`
 
 ---
 
@@ -352,68 +428,144 @@ swift list
 
 This section describes how to deploy Simple Cloud Storage to cloud servers (such as Aliyun, Tencent Cloud, AWS, etc.).
 
-#### 7.0 One-Click Deploy Script (Recommended)
+#### 7.0 Server Requirements
 
-The project provides an automatic deployment script that supports multiple Linux distributions:
+- **OS**: Linux (Ubuntu/Debian/CentOS)
+- **Minimum**: 2 CPU cores, 2GB RAM, 20GB disk
+- **Swift Storage**: Requires 4GB+ RAM
 
-**Supported OS**: Ubuntu / Debian / CentOS / RHEL / Fedora / Arch / openSUSE / Alpine
+#### 7.1 Install Dependencies
 
 ```bash
-# Clone project
-git clone https://github.com/songdiyang/simple-cloud-storage.git
-cd simple-cloud-storage
+# Ubuntu/Debian
+sudo apt update
+sudo apt install -y nginx mysql-server python3 python3-pip python3-venv git curl
 
-# Run one-click deploy
+# Install Node.js
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt install -y nodejs
+```
+
+#### 7.2 Clone Project
+
+```bash
+cd /var/www
+sudo git clone https://github.com/songdiyang/simple-cloud-storage.git
+sudo chown -R $USER:$USER simple-cloud-storage
+cd simple-cloud-storage
+```
+
+#### 7.3 Configure Database
+
+```bash
+# Start MySQL
+sudo systemctl start mysql
+sudo systemctl enable mysql
+
+# Create database and user
+sudo mysql -e "CREATE DATABASE cloud_storage CHARACTER SET utf8mb4;"
+sudo mysql -e "CREATE USER 'cloud_user'@'localhost' IDENTIFIED BY 'your_password';"
+sudo mysql -e "GRANT ALL PRIVILEGES ON cloud_storage.* TO 'cloud_user'@'localhost';"
+sudo mysql -e "FLUSH PRIVILEGES;"
+```
+
+#### 7.4 Configure Backend
+
+```bash
+# Create environment config
+cp .env.example .env
+nano .env  # Edit database configuration
+
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Database migration
+python manage.py migrate
+
+# Create admin user
+python manage.py createsuperuser
+
+# Collect static files
+python manage.py collectstatic --noinput
+```
+
+#### 7.5 Configure Frontend
+
+```bash
+cd frontend
+npm install
+npm run build
+cd ..
+```
+
+#### 7.6 Configure Nginx
+
+```bash
+sudo nano /etc/nginx/sites-available/cloudstorage
+```
+
+Configuration (customize port as needed):
+
+```nginx
+server {
+    listen 80;  # Custom port
+    server_name your_domain_or_ip;
+    client_max_body_size 100M;
+
+    location / {
+        root /var/www/simple-cloud-storage/frontend/build;
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    location /admin/ {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+    }
+
+    location /static/ {
+        alias /var/www/simple-cloud-storage/staticfiles/;
+    }
+}
+```
+
+```bash
+# Enable configuration
+sudo ln -s /etc/nginx/sites-available/cloudstorage /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl restart nginx
+```
+
+#### 7.7 Start Service
+
+```bash
+# Start backend service
+cd /var/www/simple-cloud-storage
+source venv/bin/activate
+gunicorn cloud_storage.wsgi:application --bind 0.0.0.0:8000 --daemon
+```
+
+Access `http://your_ip/` to use.
+
+#### 7.8 Local Quick Deploy (Optional)
+
+For local testing only, use the quick deploy script:
+
+```bash
 chmod +x scripts/deploy.sh
 ./scripts/deploy.sh
 ```
 
-**Features**:
-- Auto-detect Linux distribution and package manager
-- Interactive MySQL database configuration
-- Auto install OpenStack DevStack + Swift (requires 4GB+ RAM)
-- Auto deploy frontend and backend
-- Configure Gunicorn backend service
-- Display service ports and access URLs after deployment
-- Bilingual error messages (English/Chinese)
-
-**Deployment Success Example**:
-
-```
-    ██████╗██╗      ██████╗ ██╗   ██╗██████╗ 
-   ██╔════╝██║     ██╔═══██╗██║   ██║██╔══██╗
-   ██║     ██║     ██║   ██║██║   ██║██║  ██║
-   ██║     ██║     ██║   ██║██║   ██║██║  ██║
-   ╚██████╗███████╗╚██████╔╝╚██████╔╝██████╔╝
-    ╚═════╝╚══════╝ ╚═════╝  ╚═════╝ ╚═════╝ 
-
-   ☁️  Deploy Success  ☁️
-
-============================================
-  Access URL
-============================================
-
-  Cloud Storage:
-    http://<your_server_ip>:8000/
-
-  Admin:
-    http://<your_server_ip>:8000/admin/
-```
-
-#### 7.1 Server Requirements
-
-- **OS**: Linux only (Windows/macOS not supported)
-- **Minimum**: 2 CPU cores, 2GB RAM, 20GB disk
-- **Swift**: Requires 4GB+ RAM
-- **Open Ports**: 8000, 3306
-
-#### 7.2 Update After Deployment
-
-```bash
-cd /var/www/simple-cloud-storage
-git pull origin main
-./scripts/deploy.sh
-```
+Access `http://server_ip:8000/`
 
 ---
 
