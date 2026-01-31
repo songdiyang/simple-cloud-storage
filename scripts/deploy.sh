@@ -1019,9 +1019,9 @@ main() {
         echo "当前位置 / Current: $CURRENT_DIR"
         echo "目标位置 / Target:  $TARGET_DIR"
         echo ""
-        read -p "迁移到 /var/www? / Move to /var/www? [Y/n]: " move_choice
+        read -p "迁移到 /var/www? / Move to /var/www? [y/n]: " move_choice
         
-        if [[ ! "$move_choice" =~ ^[Nn]$ ]]; then
+        if [[ "$move_choice" =~ ^[Yy]$ ]]; then
             info "迁移项目到 /var/www / Moving project..."
             
             # 创建目录并迁移
@@ -1037,6 +1037,11 @@ main() {
             echo "  ./scripts/deploy.sh"
             echo ""
             exit 0
+        else
+            echo ""
+            warning "部署已取消 / Deployment cancelled"
+            echo "项目必须位于 /var/www 目录下 / Project must be in /var/www"
+            exit 1
         fi
     fi
     
