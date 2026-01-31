@@ -1004,8 +1004,44 @@ print_service_info() {
 main() {
     print_banner
     
+    # 获取当前项目目录
+    local CURRENT_DIR=$(cd "$(dirname "$0")/.." && pwd)
+    local PROJECT_NAME=$(basename "$CURRENT_DIR")
+    local TARGET_DIR="/var/www/$PROJECT_NAME"
+    
+    # 检查是否已在 /var/www 目录
+    if [[ "$CURRENT_DIR" != /var/www/* ]]; then
+        echo ""
+        echo -e "${YELLOW}============================================${NC}"
+        echo -e "${YELLOW}  项目位置检查 / Project Location${NC}"
+        echo -e "${YELLOW}============================================${NC}"
+        echo ""
+        echo "当前位置 / Current: $CURRENT_DIR"
+        echo "目标位置 / Target:  $TARGET_DIR"
+        echo ""
+        read -p "迁移到 /var/www? / Move to /var/www? [Y/n]: " move_choice
+        
+        if [[ ! "$move_choice" =~ ^[Nn]$ ]]; then
+            info "迁移项目到 /var/www / Moving project..."
+            
+            # 创建目录并迁移
+            sudo mkdir -p /var/www
+            sudo cp -r "$CURRENT_DIR" "$TARGET_DIR"
+            sudo chown -R $(whoami):$(whoami) "$TARGET_DIR"
+            
+            success "项目已迁移到 / Project moved to: $TARGET_DIR"
+            echo ""
+            echo -e "${CYAN}请进入新目录重新执行 / Please run in new directory:${NC}"
+            echo ""
+            echo "  cd $TARGET_DIR"
+            echo "  ./scripts/deploy.sh"
+            echo ""
+            exit 0
+        fi
+    fi
+    
     # 设置部署目录
-    DEPLOY_DIR=$(cd "$(dirname "$0")/.." && pwd)
+    DEPLOY_DIR="$CURRENT_DIR"
     info "部署目录 / Deploy dir: $DEPLOY_DIR"
     
     # 检测系统
